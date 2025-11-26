@@ -1,18 +1,27 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Alert, AlertDocument } from './schemas/alert.schema';
+import { AlertsGateway } from '../websocket/alerts.gateway';
 
 @Injectable()
 export class AlertsService {
     constructor(
         @InjectModel(Alert.name)
         private alertModel: Model<AlertDocument>,
+        @Inject(forwardRef(() => AlertsGateway))
+        private alertsGateway: AlertsGateway,
     ) { }
 
     async create(alertData: Partial<Alert>): Promise<Alert> {
         const alert = new this.alertModel(alertData);
-        return alert.save();
+        const savedAlert = await alert.save();
+
+        // Emit WebSocket event for real-time updates
+        this.alertsGateway.broadcastNewAlert(savedAlert.toObject());
+        console.log('🔔 New alert created and broadcasted:', savedAlert._id);
+
+        return savedAlert;
     }
 
     async findAll(filters: any = {}, limit: number = 100): Promise<Alert[]> {

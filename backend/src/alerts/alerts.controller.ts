@@ -45,4 +45,21 @@ export class AlertsController {
     ) {
         return this.alertsService.addNote(id, userId, note);
     }
+
+    // Test endpoint for WebSocket real-time testing
+    @Post('test')
+    async createTestAlert(@Body() body?: { severity?: string; summary?: string }) {
+        const testAlert = {
+            eventIds: [],
+            ruleId: 'test_realtime_websocket',
+            ruleName: '🔴 Real-Time WebSocket Test',
+            severity: body?.severity || 'critical',
+            status: 'pending',
+            summary: body?.summary || '🧪 This alert was created via API and should appear instantly via WebSocket!',
+            affectedAssets: ['test-server-realtime'],
+            investigationNotes: [],
+        };
+
+        return this.alertsService.create(testAlert as any);
+    }
 }
