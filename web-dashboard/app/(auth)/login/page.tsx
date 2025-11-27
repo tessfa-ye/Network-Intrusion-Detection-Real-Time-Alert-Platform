@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { AxiosError } from 'axios';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -56,9 +57,10 @@ export default function LoginPage() {
 
             toast.success('Login successful');
             router.push('/dashboard');
-        } catch (error: any) {
+        } catch (error) {
             console.error('Login error:', error);
-            toast.error(error.response?.data?.message || 'Failed to login. Please check your credentials.');
+            const err = error as AxiosError<{ message: string }>;
+            toast.error(err.response?.data?.message || 'Failed to login. Please check your credentials.');
         } finally {
             setIsLoading(false);
         }

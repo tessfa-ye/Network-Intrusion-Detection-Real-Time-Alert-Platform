@@ -15,7 +15,6 @@ export default function DashboardLayout({
 
     useEffect(() => {
         // Basic client-side protection
-        // In a real app, Middleware is better for this
         const token = localStorage.getItem('accessToken');
         if (!token && !isAuthenticated) {
             router.push('/login');
@@ -23,12 +22,12 @@ export default function DashboardLayout({
     }, [isAuthenticated, router]);
 
     if (!isAuthenticated && typeof window !== 'undefined' && !localStorage.getItem('accessToken')) {
-        return null; // Or a loading spinner
+        return null;
     }
 
     return (
         <div className="flex min-h-screen bg-slate-100 dark:bg-slate-900">
-            {/* Sidebar Placeholder */}
+            {/* Sidebar */}
             <aside className="hidden w-64 flex-col border-r bg-white dark:bg-slate-950 md:flex">
                 <div className="flex h-14 items-center border-b px-4 font-semibold">
                     NIDAS Platform
@@ -46,6 +45,9 @@ export default function DashboardLayout({
                         </a>
                         <a href="/dashboard/rules" className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-500 transition-all hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-50">
                             Rules
+                        </a>
+                        <a href="/dashboard/users" className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-500 transition-all hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-50">
+                            Users
                         </a>
                     </nav>
                 </div>

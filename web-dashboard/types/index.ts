@@ -7,6 +7,11 @@ export interface User {
   active: boolean;
   lastLogin?: string;
   createdAt: string;
+  notificationPreferences?: {
+    email: boolean;
+    push: boolean;
+    minSeverity: 'low' | 'medium' | 'high' | 'critical';
+  };
 }
 
 export interface SecurityEvent {
@@ -17,7 +22,7 @@ export interface SecurityEvent {
   sourceIP: string;
   targetIP?: string;
   description: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   processed: boolean;
 }
 
@@ -49,8 +54,8 @@ export interface DetectionRule {
   description: string;
   enabled: boolean;
   severity: 'low' | 'medium' | 'high' | 'critical';
-  conditions: any[];
-  actions: any[];
+  conditions: unknown[];
+  actions: unknown[];
   createdAt: string;
 }
 
