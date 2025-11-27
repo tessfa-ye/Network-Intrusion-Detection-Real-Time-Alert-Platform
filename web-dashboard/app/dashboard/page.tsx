@@ -1,7 +1,70 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
+import { getSocket } from '@/lib/socket';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Activity, AlertTriangle, ShieldCheck, Server } from 'lucide-react';
+import { ActivityChart } from '@/components/dashboard/activity-chart';
+import { LatestAlerts } from '@/components/dashboard/latest-alerts';
+
+interface DashboardStats {
+    totalAlerts: number;
+    activeEvents: number;
+    systemHealth: string;
+    activeRules: number;
+    alertsChange: number;
+    eventsChange: number;
+}
 
 export default function DashboardPage() {
+    const [stats, setStats] = useState<DashboardStats>({
+        totalAlerts: 0,
+        activeEvents: 0,
+        systemHealth: 'Healthy',
+        activeRules: 0,
+        alertsChange: 0,
+        eventsChange: 0,
+    });
+
+    // Fetch initial stats
+    const { data } = useQuery({
+        queryKey: ['dashboard-stats'],
+        queryFn: async () => {
+            const response = await api.get('/dashboard/stats');
+            return response.data as DashboardStats;
+        },
+    });
+
+    useEffect(() => {
+        if (data) {
+            setStats(data);
+        }
+    }, [data]);
+
+    // WebSocket real-time updates
+    useEffect(() => {
+        const socket = getSocket();
+        const token = localStorage.getItem('accessToken');
+
+        if (token && socket) {
+            socket.auth = { token };
+            socket.connect();
+
+            socket.emit('subscribe:stats');
+
+            socket.on('stats:updated', (newStats: DashboardStats) => {
+                console.log('📊 Stats updated:', newStats);
+                setStats(newStats);
+            });
+
+            return () => {
+                socket.off('stats:updated');
+            };
+        }
+    }, []);
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -15,8 +78,10 @@ export default function DashboardPage() {
                         <AlertTriangle className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">12</div>
-                        <p className="text-xs text-muted-foreground">+2 from last hour</p>
+                        <div className="text-2xl font-bold">{stats.totalAlerts}</div>
+                        <p className="text-xs text-muted-foreground">
+                            {stats.alertsChange >= 0 ? '+' : ''}{stats.alertsChange} from last hour
+                        </p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -25,17 +90,19 @@ export default function DashboardPage() {
                         <Activity className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">1,234</div>
-                        <p className="text-xs text-muted-foreground">+180 from last hour</p>
+                        <div className="text-2xl font-bold">{stats.activeEvents}</div>
+                        <p className="text-xs text-muted-foreground">
+                            {stats.eventsChange >= 0 ? '+' : ''}{stats.eventsChange} from last hour
+                        </p>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">System Health</CardTitle>
-                        <Server className="h-4 w-4 text-green-500" />
+                        <Server className={`h-4 w-4 ${stats.systemHealth === 'Healthy' ? 'text-green-500' : 'text-red-500'}`} />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">Healthy</div>
+                        <div className="text-2xl font-bold">{stats.systemHealth}</div>
                         <p className="text-xs text-muted-foreground">All systems operational</p>
                     </CardContent>
                 </Card>
@@ -45,8 +112,8 @@ export default function DashboardPage() {
                         <ShieldCheck className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">8</div>
-                        <p className="text-xs text-muted-foreground">2 disabled</p>
+                        <div className="text-2xl font-bold">{stats.activeRules}</div>
+                        <p className="text-xs text-muted-foreground">Detection rules enabled</p>
                     </CardContent>
                 </Card>
             </div>
@@ -57,9 +124,7 @@ export default function DashboardPage() {
                         <CardTitle>Recent Activity</CardTitle>
                     </CardHeader>
                     <CardContent className="pl-2">
-                        <div className="h-[200px] flex items-center justify-center text-muted-foreground">
-                            Chart Placeholder
-                        </div>
+                        <ActivityChart />
                     </CardContent>
                 </Card>
                 <Card className="col-span-3">
@@ -67,21 +132,7 @@ export default function DashboardPage() {
                         <CardTitle>Latest Alerts</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="space-y-4">
-                            {[1, 2, 3].map((i) => (
-                                <div key={i} className="flex items-center">
-                                    <div className="ml-4 space-y-1">
-                                        <p className="text-sm font-medium leading-none">
-                                            Suspicious Login Attempt
-                                        </p>
-                                        <p className="text-sm text-muted-foreground">
-                                            192.168.1.100 • 2 mins ago
-                                        </p>
-                                    </div>
-                                    <div className="ml-auto font-medium text-red-500">Critical</div>
-                                </div>
-                            ))}
-                        </div>
+                        <LatestAlerts />
                     </CardContent>
                 </Card>
             </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { getSocket } from '@/lib/socket';
 import { Alert } from '@/types';
@@ -29,6 +30,7 @@ const statusColors = {
 };
 
 export default function AlertsPage() {
+    const router = useRouter();
     const [alerts, setAlerts] = useState<Alert[]>([]);
     const [selectedSeverity, setSelectedSeverity] = useState<string>('all');
     const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -152,7 +154,11 @@ export default function AlertsPage() {
                                     </TableRow>
                                 ) : (
                                     filteredAlerts.map((alert) => (
-                                        <TableRow key={alert._id}>
+                                        <TableRow
+                                            key={alert._id}
+                                            className="cursor-pointer hover:bg-muted/50"
+                                            onClick={() => router.push(`/dashboard/alerts/${alert._id}`)}
+                                        >
                                             <TableCell className="font-medium">{alert.ruleName}</TableCell>
                                             <TableCell>
                                                 <Badge className={severityColors[alert.severity]}>

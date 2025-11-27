@@ -36,7 +36,7 @@ export class DetectionRule {
 
     @Prop({
         type: [Object],
-        required: true,
+        default: [],
     })
     conditions: RuleCondition[];
 

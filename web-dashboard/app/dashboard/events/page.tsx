@@ -1,13 +1,16 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { getSocket } from '@/lib/socket';
 import { SecurityEvent } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 
 const severityColors = {
     critical: 'bg-red-500 hover:bg-red-600',
@@ -17,13 +20,44 @@ const severityColors = {
 };
 
 export default function EventsPage() {
-    const { data: events, isLoading, refetch } = useQuery({
+    const [events, setEvents] = useState<SecurityEvent[]>([]);
+
+    const { data, isLoading, refetch } = useQuery({
         queryKey: ['events'],
         queryFn: async () => {
             const response = await api.get('/events');
             return response.data as SecurityEvent[];
         },
     });
+
+    useEffect(() => {
+        if (data) {
+            setEvents(data);
+        }
+    }, [data]);
+
+    // WebSocket real-time updates
+    useEffect(() => {
+        const socket = getSocket();
+        const token = localStorage.getItem('accessToken');
+
+        if (token && socket) {
+            socket.auth = { token };
+            socket.connect();
+
+            socket.emit('subscribe:events');
+
+            socket.on('event:new', (newEvent: SecurityEvent) => {
+                console.log('🔔 New event received:', newEvent);
+                setEvents((prev) => [newEvent, ...prev]);
+                toast.info(`New ${newEvent.severity.toUpperCase()} event: ${newEvent.eventType}`);
+            });
+
+            return () => {
+                socket.off('event:new');
+            };
+        }
+    }, []);
 
     return (
         <div className="space-y-6">
@@ -37,7 +71,7 @@ export default function EventsPage() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>All Events ({events?.length || 0})</CardTitle>
+                    <CardTitle>All Events ({events.length})</CardTitle>
                 </CardHeader>
                 <CardContent>
                     {isLoading ? (
