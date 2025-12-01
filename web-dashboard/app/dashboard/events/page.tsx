@@ -62,7 +62,7 @@ export default function EventsPage() {
             socket.emit('subscribe:events');
 
             socket.on('event:new', (newEvent: SecurityEvent) => {
-                console.log('🔔 New event received:', newEvent);
+
                 setEvents((prev: SecurityEvent[]) => [newEvent, ...prev]);
                 toast.info(`New ${newEvent.severity.toUpperCase()} event: ${newEvent.eventType}`);
             });

@@ -96,7 +96,7 @@ export function RuleForm({ rule, onSuccess }: RuleFormProps) {
 
             // Validate conditions before submitting
             if (!validateCondition(conditions)) {
-                toast.error('Please complete all rule conditions');
+                toast.error('Please complete all rule conditions with valid values');
                 throw new Error('Invalid conditions');
             }
 
@@ -124,11 +124,9 @@ export function RuleForm({ rule, onSuccess }: RuleFormProps) {
             form.reset();
         },
         onError: (error: unknown) => {
-            console.error('Rule save error:', error);
             if (error instanceof AxiosError) {
                 const errorMsg = error.response?.data?.message || error.message || 'Failed to save rule';
                 toast.error(errorMsg);
-                console.error('Backend error response:', error.response?.data);
             } else if (error instanceof Error) {
                 if (error.message !== 'Invalid conditions') {
                     toast.error(error.message);

@@ -68,7 +68,7 @@ export default function DashboardPage() {
             socket.emit('subscribe:stats');
 
             socket.on('stats:updated', (newStats: DashboardStats) => {
-                console.log('📊 Stats updated:', newStats);
+
                 setStats(newStats);
             });
 

@@ -29,22 +29,26 @@ export function TemplatesDialog({ open, onOpenChange, onDeploy }: TemplatesDialo
     const [previewTemplate, setPreviewTemplate] = useState<RuleTemplate | null>(null);
 
     // Filter templates based on search and category
-    const filteredTemplates = RULE_TEMPLATES.filter((template) => {
-        const matchesSearch =
-            search === '' ||
-            template.name.toLowerCase().includes(search.toLowerCase()) ||
-            template.description.toLowerCase().includes(search.toLowerCase()) ||
-            template.tags.some((tag) => tag.toLowerCase().includes(search.toLowerCase()));
+    const filteredTemplates = React.useMemo(() => {
+        return RULE_TEMPLATES.filter((template) => {
+            const matchesSearch =
+                search === '' ||
+                template.name.toLowerCase().includes(search.toLowerCase()) ||
+                template.description.toLowerCase().includes(search.toLowerCase()) ||
+                template.tags.some((tag) => tag.toLowerCase().includes(search.toLowerCase()));
 
-        const matchesCategory = selectedCategory === 'all' || template.category === selectedCategory;
+            const matchesCategory = selectedCategory === 'all' || template.category === selectedCategory;
 
-        return matchesSearch && matchesCategory;
-    });
+            return matchesSearch && matchesCategory;
+        });
+    }, [search, selectedCategory]);
 
-    const handleDeploy = (template: RuleTemplate) => {
+    const handleDeploy = React.useCallback((template: RuleTemplate) => {
         onDeploy(template);
         onOpenChange(false);
-    };
+    }, [onDeploy, onOpenChange]);
+
+
 
     return (
         <>
@@ -62,12 +66,13 @@ export function TemplatesDialog({ open, onOpenChange, onDeploy }: TemplatesDialo
                     <div className="flex-1 flex flex-col space-y-4 pt-2 overflow-hidden">
                         {/* Search */}
                         <div className="relative shrink-0">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
                             <Input
                                 placeholder="Search templates by name, description, or tags..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 className="pl-9 h-11 border-2 focus:border-primary transition-colors"
+                                aria-label="Search rule templates"
                             />
                         </div>
 

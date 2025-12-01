@@ -80,13 +80,13 @@ export default function AlertsPage() {
             socket.emit('subscribe:alerts');
 
             socket.on('alert:new', (newAlert: Alert) => {
-                console.log('🔔 New alert received:', newAlert);
+
                 setAlerts((prev: Alert[]) => [newAlert, ...prev]);
                 toast.info(`New ${newAlert.severity.toUpperCase()} alert: ${newAlert.ruleName}`);
             });
 
             socket.on('alert:updated', (updatedAlert: Alert) => {
-                console.log('🔄 Alert updated:', updatedAlert);
+
                 setAlerts((prev: Alert[]) =>
                     prev.map((a) => (a._id === updatedAlert._id ? updatedAlert : a))
                 );
