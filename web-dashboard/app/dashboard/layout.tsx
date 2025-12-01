@@ -3,6 +3,8 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store';
+import { Button } from '@/components/ui/button';
+import { LogOut } from 'lucide-react';
 
 export default function DashboardLayout({
     children,
@@ -12,6 +14,14 @@ export default function DashboardLayout({
     const router = useRouter();
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
     const user = useAuthStore((state) => state.user);
+    const logout = useAuthStore((state) => state.logout);
+
+    const handleLogout = () => {
+        logout();
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('user');
+        router.push('/login');
+    };
 
     useEffect(() => {
         // Basic client-side protection
@@ -51,7 +61,7 @@ export default function DashboardLayout({
                         </a>
                     </nav>
                 </div>
-                <div className="border-t p-4">
+                <div className="border-t p-4 space-y-2">
                     <div className="flex items-center gap-3">
                         <div className="h-8 w-8 rounded-full bg-slate-200"></div>
                         <div className="text-sm">
@@ -59,6 +69,15 @@ export default function DashboardLayout({
                             <div className="text-xs text-slate-500">{user?.role}</div>
                         </div>
                     </div>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={handleLogout}
+                    >
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Logout
+                    </Button>
                 </div>
             </aside>
 

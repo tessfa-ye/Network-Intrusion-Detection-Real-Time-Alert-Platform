@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Activity, AlertTriangle, ShieldCheck, Server } from 'lucide-react';
 import { ActivityChart } from '@/components/dashboard/activity-chart';
 import { LatestAlerts } from '@/components/dashboard/latest-alerts';
+import { SeverityChart } from '@/components/dashboard/severity-chart';
 
 interface DashboardStats {
     totalAlerts: number;
@@ -16,6 +17,12 @@ interface DashboardStats {
     activeRules: number;
     alertsChange: number;
     eventsChange: number;
+    severityDistribution: {
+        critical: number;
+        high: number;
+        medium: number;
+        low: number;
+    };
 }
 
 export default function DashboardPage() {
@@ -26,6 +33,12 @@ export default function DashboardPage() {
         activeRules: 0,
         alertsChange: 0,
         eventsChange: 0,
+        severityDistribution: {
+            critical: 0,
+            high: 0,
+            medium: 0,
+            low: 0,
+        },
     });
 
     // Fetch initial stats
@@ -127,6 +140,7 @@ export default function DashboardPage() {
                         <ActivityChart />
                     </CardContent>
                 </Card>
+                <SeverityChart data={stats.severityDistribution} />
                 <Card className="col-span-3">
                     <CardHeader>
                         <CardTitle>Latest Alerts</CardTitle>

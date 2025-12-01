@@ -46,7 +46,7 @@ export class DetectionRule {
     })
     actions: RuleAction[];
 
-    @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+    @Prop({ type: Types.ObjectId, ref: 'User' })
     createdBy: Types.ObjectId;
 }
 

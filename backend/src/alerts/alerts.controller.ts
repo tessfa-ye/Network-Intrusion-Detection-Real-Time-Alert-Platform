@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, Query, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { AlertsService } from './alerts.service';
 
 @Controller('alerts')
@@ -10,10 +10,14 @@ export class AlertsController {
         @Query('limit') limit?: number,
         @Query('status') status?: string,
         @Query('severity') severity?: string,
+        @Query('startDate') startDate?: string,
+        @Query('endDate') endDate?: string,
     ) {
         const filters: any = {};
         if (status) filters.status = status;
         if (severity) filters.severity = severity;
+        if (startDate) filters.startDate = startDate;
+        if (endDate) filters.endDate = endDate;
 
         return this.alertsService.findAll(filters, limit || 100);
     }
@@ -26,6 +30,43 @@ export class AlertsController {
     @Get(':id')
     async findOne(@Param('id') id: string) {
         return this.alertsService.findById(id);
+    }
+
+    @Patch('bulk-update')
+    async bulkUpdate(
+        @Body('alertIds') alertIds: string[],
+        @Body('status') status?: string,
+        @Body('action') action?: 'delete',
+    ) {
+        console.log('📝 Bulk update request:', { count: alertIds?.length, status, action });
+
+        if (!alertIds || !Array.isArray(alertIds) || alertIds.length === 0) {
+            throw new BadRequestException('No alert IDs provided');
+        }
+
+        if (action === 'delete') {
+            return this.alertsService.bulkDelete(alertIds);
+        }
+
+        if (!status) {
+            throw new BadRequestException('Status is required for update');
+        }
+
+        try {
+            return await this.alertsService.bulkUpdateStatus(alertIds, status);
+        } catch (error) {
+            console.error('❌ Bulk update error in controller:', error);
+            throw new InternalServerErrorException(`Bulk update failed: ${error.message}`);
+        }
+    }
+
+    @Patch(':id/assign')
+    async assignAlert(
+        @Param('id') id: string,
+        @Body('userId') userId: string,
+    ) {
+        // Allow empty string or null for unassignment
+        return this.alertsService.assignAlert(id, userId);
     }
 
     @Patch(':id')

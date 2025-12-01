@@ -46,6 +46,7 @@ export default function UsersPage() {
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [deletingUser, setDeletingUser] = useState<User | null>(null);
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     const { data: users = [], isLoading, refetch } = useQuery({
         queryKey: ['users'],
@@ -80,13 +81,24 @@ export default function UsersPage() {
         return true;
     });
 
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        await refetch();
+        setTimeout(() => setIsRefreshing(false), 500);
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
                 <div className="flex gap-2">
-                    <Button onClick={() => refetch()} variant="outline" size="sm">
-                        <RefreshCw className="mr-2 h-4 w-4" />
+                    <Button
+                        onClick={handleRefresh}
+                        variant="outline"
+                        size="sm"
+                        disabled={isRefreshing}
+                    >
+                        <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                         Refresh
                     </Button>
                     <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>

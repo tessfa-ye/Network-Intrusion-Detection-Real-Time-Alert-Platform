@@ -8,6 +8,7 @@ import { RulesModule } from './rules/rules.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { WebsocketModule } from './websocket/websocket.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
     imports: [
@@ -28,6 +29,7 @@ import { WebsocketModule } from './websocket/websocket.module';
         EventsModule,
         AlertsModule,
         RulesModule,
+        DashboardModule,
         WebsocketModule,
     ],
 })

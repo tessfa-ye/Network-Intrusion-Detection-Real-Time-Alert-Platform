@@ -25,7 +25,9 @@ export class RulesService {
     }
 
     async update(id: string, updateData: Partial<DetectionRule>): Promise<DetectionRule | null> {
-        return this.ruleModel.findByIdAndUpdate(id, updateData, { new: true }).exec();
+        // Don't include createdBy in updates
+        const { createdBy, ...dataToUpdate } = updateData as any;
+        return this.ruleModel.findByIdAndUpdate(id, dataToUpdate, { new: true }).exec();
     }
 
     async delete(id: string): Promise<void> {

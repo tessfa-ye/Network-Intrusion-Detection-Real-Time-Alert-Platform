@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -24,6 +24,10 @@ import { Switch } from '@/components/ui/switch';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AxiosError } from 'axios';
+import { ConditionBuilder } from './condition-builder';
+import { ConditionPreview } from './condition-preview';
+import { RuleConditionGroup } from '@/types/rule-conditions';
+import { emptyGroup, validateCondition, convertLegacyConditions } from '@/lib/condition-utils';
 
 const formSchema = z.object({
     name: z.string().min(1, 'Name is required'),
@@ -42,6 +46,12 @@ interface RuleFormProps {
 export function RuleForm({ rule, onSuccess }: RuleFormProps) {
     const queryClient = useQueryClient();
     const isEditing = !!rule;
+    const [conditions, setConditions] = useState<RuleConditionGroup>(() => {
+        if (rule?.conditions && Array.isArray(rule.conditions) && rule.conditions.length > 0) {
+            return convertLegacyConditions(rule.conditions);
+        }
+        return emptyGroup();
+    });
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -61,8 +71,22 @@ export function RuleForm({ rule, onSuccess }: RuleFormProps) {
                 severity: rule.severity,
                 enabled: rule.enabled,
             });
+            if (rule.conditions && Array.isArray(rule.conditions) && rule.conditions.length > 0) {
+                setConditions(convertLegacyConditions(rule.conditions));
+            } else {
+                setConditions(emptyGroup());
+            }
+        } else {
+            // Reset to empty when no rule (creating new)
+            form.reset({
+                name: '',
+                description: '',
+                severity: 'medium',
+                enabled: true,
+            });
+            setConditions(emptyGroup());
         }
-    }, [rule, form]);
+    }, [rule?._id, rule?.name, rule?.description, rule?.severity, rule?.enabled, form]);
 
     const mutation = useMutation({
         mutationFn: async (values: FormValues) => {
@@ -70,9 +94,15 @@ export function RuleForm({ rule, onSuccess }: RuleFormProps) {
             const userStr = localStorage.getItem('user');
             const user = userStr ? JSON.parse(userStr) : null;
 
+            // Validate conditions before submitting
+            if (!validateCondition(conditions)) {
+                toast.error('Please complete all rule conditions');
+                throw new Error('Invalid conditions');
+            }
+
             const data: any = {
                 ...values,
-                conditions: [],
+                conditions: [conditions], // Store as array with our condition tree
                 actions: [],
             };
 
@@ -94,8 +124,15 @@ export function RuleForm({ rule, onSuccess }: RuleFormProps) {
             form.reset();
         },
         onError: (error: unknown) => {
+            console.error('Rule save error:', error);
             if (error instanceof AxiosError) {
-                toast.error(error.response?.data?.message || 'Failed to save rule');
+                const errorMsg = error.response?.data?.message || error.message || 'Failed to save rule';
+                toast.error(errorMsg);
+                console.error('Backend error response:', error.response?.data);
+            } else if (error instanceof Error) {
+                if (error.message !== 'Invalid conditions') {
+                    toast.error(error.message);
+                }
             } else {
                 toast.error('Failed to save rule');
             }
@@ -165,14 +202,25 @@ export function RuleForm({ rule, onSuccess }: RuleFormProps) {
                     )}
                 />
 
+                <div className="space-y-4 p-5 border-2 border-dashed rounded-lg bg-muted/30">
+                    <div>
+                        <FormLabel className="text-base font-semibold">Rule Conditions</FormLabel>
+                        <FormDescription className="mb-4 text-sm">
+                            Define when this rule should trigger an alert using the visual builder below
+                        </FormDescription>
+                        <ConditionBuilder value={conditions} onChange={setConditions} />
+                    </div>
+                    <ConditionPreview condition={conditions} />
+                </div>
+
                 <FormField
                     control={form.control}
                     name="enabled"
                     render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border-2 p-5 bg-gradient-to-br from-muted/40 to-muted/20">
                             <div className="space-y-0.5">
-                                <FormLabel className="text-base">Enabled</FormLabel>
-                                <FormDescription>Rule will actively detect threats</FormDescription>
+                                <FormLabel className="text-base font-semibold">Enabled</FormLabel>
+                                <FormDescription>Activate this rule to detect threats in real-time</FormDescription>
                             </div>
                             <FormControl>
                                 <Switch checked={field.value} onCheckedChange={field.onChange} />
@@ -181,11 +229,11 @@ export function RuleForm({ rule, onSuccess }: RuleFormProps) {
                     )}
                 />
 
-                <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" onClick={onSuccess}>
+                <div className="flex justify-end gap-3 pt-4 border-t">
+                    <Button type="button" variant="outline" onClick={onSuccess} className="min-w-[100px]">
                         Cancel
                     </Button>
-                    <Button type="submit" disabled={mutation.isPending}>
+                    <Button type="submit" disabled={mutation.isPending} className="min-w-[140px] font-semibold">
                         {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         {isEditing ? 'Update Rule' : 'Create Rule'}
                     </Button>

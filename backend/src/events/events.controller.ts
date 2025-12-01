@@ -29,11 +29,15 @@ export class EventsController {
         @Query('eventType') eventType?: string,
         @Query('severity') severity?: string,
         @Query('sourceIP') sourceIP?: string,
+        @Query('startDate') startDate?: string,
+        @Query('endDate') endDate?: string,
     ) {
         const filters: any = {};
         if (eventType) filters.eventType = eventType;
         if (severity) filters.severity = severity;
         if (sourceIP) filters.sourceIP = sourceIP;
+        if (startDate) filters.startDate = startDate;
+        if (endDate) filters.endDate = endDate;
 
         return this.eventsService.findAll(filters, limit || 100);
     }

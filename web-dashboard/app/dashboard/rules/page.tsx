@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -19,8 +19,10 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Loader2, RefreshCw, Plus, Edit, Trash2 } from 'lucide-react';
+import { Loader2, RefreshCw, Plus, Edit, Trash2, BookTemplate } from 'lucide-react';
 import { RuleForm } from '@/components/rules/rule-form';
+import { TemplatesDialog } from '@/components/rules/templates-dialog';
+import { RuleTemplate } from '@/lib/rule-templates';
 import { toast } from 'sonner';
 
 const severityColors = {
@@ -33,8 +35,10 @@ const severityColors = {
 export default function RulesPage() {
     const queryClient = useQueryClient();
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+    const [isTemplatesDialogOpen, setIsTemplatesDialogOpen] = useState(false);
     const [editingRule, setEditingRule] = useState<DetectionRule | null>(null);
     const [deletingRule, setDeletingRule] = useState<DetectionRule | null>(null);
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     const { data: rules, isLoading, refetch } = useQuery({
         queryKey: ['rules'],
@@ -58,10 +62,56 @@ export default function RulesPage() {
         },
     });
 
+    const deployTemplateMutation = useMutation({
+        mutationFn: async (template: RuleTemplate) => {
+            // Check if rule with same name already exists
+            const existingRules = await api.get('/rules');
+            const isDuplicate = existingRules.data.some(
+                (rule: DetectionRule) => rule.name === template.name
+            );
+
+            if (isDuplicate) {
+                throw new Error('DUPLICATE');
+            }
+
+            const userStr = localStorage.getItem('user');
+            const user = userStr ? JSON.parse(userStr) : null;
+
+            const data = {
+                name: template.name,
+                description: template.description,
+                severity: template.severity,
+                enabled: true,
+                conditions: [template.conditions],
+                actions: [],
+                createdBy: user?.id,
+            };
+
+            await api.post('/rules', data);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['rules'] });
+            toast.success('Template deployed successfully');
+        },
+        onError: (error: any) => {
+            if (error.message === 'DUPLICATE') {
+                toast.error('This rule has already been deployed');
+            } else {
+                toast.error('Failed to deploy template');
+            }
+        },
+    });
+
     const handleDelete = () => {
         if (deletingRule) {
             deleteMutation.mutate(deletingRule._id);
         }
+    };
+
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        await refetch();
+        setTimeout(() => setIsRefreshing(false), 500);
     };
 
     return (
@@ -69,9 +119,22 @@ export default function RulesPage() {
             <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold tracking-tight">Detection Rules</h1>
                 <div className="flex gap-2">
-                    <Button onClick={() => refetch()} variant="outline" size="sm">
-                        <RefreshCw className="mr-2 h-4 w-4" />
+                    <Button
+                        onClick={handleRefresh}
+                        variant="outline"
+                        size="sm"
+                        disabled={isRefreshing}
+                    >
+                        <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                         Refresh
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsTemplatesDialogOpen(true)}
+                    >
+                        <BookTemplate className="mr-2 h-4 w-4" />
+                        Browse Templates
                     </Button>
                     <Button size="sm" onClick={() => setIsCreateDialogOpen(true)}>
                         <Plus className="mr-2 h-4 w-4" />
@@ -155,21 +218,35 @@ export default function RulesPage() {
 
             {/* Create Rule Dialog */}
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                        <DialogTitle>Create Detection Rule</DialogTitle>
+                <DialogContent className="max-w-4xl h-[90vh] flex flex-col overflow-hidden">
+                    <DialogHeader className="border-b pb-4 shrink-0 bg-background z-20">
+                        <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+                            Create Detection Rule
+                        </DialogTitle>
+                        <DialogDescription className="text-base">
+                            Define a new rule to detect security threats in your network
+                        </DialogDescription>
                     </DialogHeader>
-                    <RuleForm onSuccess={() => setIsCreateDialogOpen(false)} />
+                    <div className="flex-1 overflow-y-auto pt-4 scrollbar-thin scrollbar-thumb-transparent hover:scrollbar-thumb-border scrollbar-track-transparent">
+                        <RuleForm onSuccess={() => setIsCreateDialogOpen(false)} />
+                    </div>
                 </DialogContent>
             </Dialog>
 
             {/* Edit Rule Dialog */}
             <Dialog open={!!editingRule} onOpenChange={() => setEditingRule(null)}>
-                <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                        <DialogTitle>Edit Detection Rule</DialogTitle>
+                <DialogContent className="max-w-4xl h-[90vh] flex flex-col overflow-hidden">
+                    <DialogHeader className="border-b pb-4 shrink-0 bg-background z-20">
+                        <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+                            Edit Detection Rule
+                        </DialogTitle>
+                        <DialogDescription className="text-base">
+                            Modify the rule configuration and conditions
+                        </DialogDescription>
                     </DialogHeader>
-                    <RuleForm rule={editingRule} onSuccess={() => setEditingRule(null)} />
+                    <div className="flex-1 overflow-y-auto pt-4 scrollbar-thin scrollbar-thumb-transparent hover:scrollbar-thumb-border scrollbar-track-transparent">
+                        <RuleForm rule={editingRule} onSuccess={() => setEditingRule(null)} />
+                    </div>
                 </DialogContent>
             </Dialog>
 
@@ -194,6 +271,13 @@ export default function RulesPage() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Templates Dialog */}
+            <TemplatesDialog
+                open={isTemplatesDialogOpen}
+                onOpenChange={setIsTemplatesDialogOpen}
+                onDeploy={deployTemplateMutation.mutate}
+            />
         </div>
     );
 }

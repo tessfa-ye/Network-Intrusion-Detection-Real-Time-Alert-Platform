@@ -9,8 +9,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, RefreshCw } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2, RefreshCw, Download, FileText } from 'lucide-react';
 import { toast } from 'sonner';
+import { exportToCSV, exportToDOC, generateFilename } from '@/lib/export-utils';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const severityColors = {
     critical: 'bg-red-500 hover:bg-red-600',
@@ -21,11 +29,18 @@ const severityColors = {
 
 export default function EventsPage() {
     const [events, setEvents] = useState<SecurityEvent[]>([]);
+    const [selectedSeverity, setSelectedSeverity] = useState<string>('all');
+    const [selectedEventType, setSelectedEventType] = useState<string>('all');
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     const { data, isLoading, refetch } = useQuery({
-        queryKey: ['events'],
+        queryKey: ['events', selectedSeverity, selectedEventType],
         queryFn: async () => {
-            const response = await api.get('/events');
+            const params: Record<string, string> = {};
+            if (selectedSeverity !== 'all') params.severity = selectedSeverity;
+            if (selectedEventType !== 'all') params.eventType = selectedEventType;
+
+            const response = await api.get('/events', { params });
             return response.data as SecurityEvent[];
         },
     });
@@ -36,7 +51,6 @@ export default function EventsPage() {
         }
     }, [data]);
 
-    // WebSocket real-time updates
     useEffect(() => {
         const socket = getSocket();
         const token = localStorage.getItem('accessToken');
@@ -49,7 +63,7 @@ export default function EventsPage() {
 
             socket.on('event:new', (newEvent: SecurityEvent) => {
                 console.log('🔔 New event received:', newEvent);
-                setEvents((prev) => [newEvent, ...prev]);
+                setEvents((prev: SecurityEvent[]) => [newEvent, ...prev]);
                 toast.info(`New ${newEvent.severity.toUpperCase()} event: ${newEvent.eventType}`);
             });
 
@@ -59,14 +73,86 @@ export default function EventsPage() {
         }
     }, []);
 
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        await refetch();
+        setTimeout(() => setIsRefreshing(false), 500);
+    };
+
+    const handleExport = (format: string) => {
+        if (!events || events.length === 0) {
+            toast.error('No events to export');
+            return;
+        }
+
+        const headers = ['Event Type', 'Severity', 'Source IP', 'Description', 'Processed', 'Timestamp'];
+        const keys: (keyof SecurityEvent)[] = ['eventType', 'severity', 'sourceIP', 'description', 'processed', 'timestamp'];
+
+        if (format === 'csv') {
+            exportToCSV(events, generateFilename('events'), headers, keys);
+            toast.success(`Exported ${events.length} events as CSV`);
+        } else if (format === 'doc') {
+            exportToDOC(events, generateFilename('events'), 'Security Events Report', headers, keys);
+            toast.success(`Exported ${events.length} events as DOC`);
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold tracking-tight">Security Events</h1>
-                <Button onClick={() => refetch()} variant="outline" size="sm">
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Refresh
-                </Button>
+                <div className="flex gap-2">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm">
+                                <Download className="mr-2 h-4 w-4" />
+                                Export
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleExport('csv')}>
+                                <FileText className="mr-2 h-4 w-4" />
+                                Export as CSV
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleExport('doc')}>
+                                <FileText className="mr-2 h-4 w-4" />
+                                Export as DOC
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Button onClick={handleRefresh} variant="outline" size="sm" disabled={isRefreshing}>
+                        <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                        Refresh
+                    </Button>
+                </div>
+            </div>
+
+            <div className="flex gap-4">
+                <Select value={selectedSeverity} onValueChange={setSelectedSeverity}>
+                    <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Filter by severity" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Severities</SelectItem>
+                        <SelectItem value="critical">Critical</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="low">Low</SelectItem>
+                    </SelectContent>
+                </Select>
+
+                <Select value={selectedEventType} onValueChange={setSelectedEventType}>
+                    <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Filter by type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        <SelectItem value="intrusion">Intrusion</SelectItem>
+                        <SelectItem value="malware">Malware</SelectItem>
+                        <SelectItem value="auth_failure">Auth Failure</SelectItem>
+                        <SelectItem value="system_anomaly">System Anomaly</SelectItem>
+                    </SelectContent>
+                </Select>
             </div>
 
             <Card>
