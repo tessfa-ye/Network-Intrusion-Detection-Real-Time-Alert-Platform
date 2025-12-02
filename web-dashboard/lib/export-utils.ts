@@ -12,7 +12,7 @@ export function exportToCSV<T extends Record<string, any>>(
     const csvHeaders = headers.map(escapeCSVField).join(',');
     const csvRows = data.map(item => {
         return keys.map(key => {
-            let value = item[key];
+            let value: any = item[key];
             if (value && typeof value === 'object' && 'toLocaleString' in value) {
                 value = (value as Date).toLocaleString();
             } else if (value == null) {

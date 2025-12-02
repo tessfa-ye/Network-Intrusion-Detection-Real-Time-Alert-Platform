@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
+import { ModeToggle } from '@/components/mode-toggle';
 
 export default function DashboardLayout({
     children,
@@ -39,8 +40,9 @@ export default function DashboardLayout({
         <div className="flex min-h-screen bg-slate-100 dark:bg-slate-900">
             {/* Sidebar */}
             <aside className="hidden w-64 flex-col border-r bg-white dark:bg-slate-950 md:flex">
-                <div className="flex h-14 items-center border-b px-4 font-semibold">
+                <div className="flex h-14 items-center justify-between border-b px-4 font-semibold">
                     NIDAS Platform
+                    <ModeToggle />
                 </div>
                 <div className="flex-1 overflow-auto py-2">
                     <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
