@@ -6,9 +6,21 @@ import { api } from '@/lib/api';
 import { getSocket } from '@/lib/socket';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Activity, AlertTriangle, ShieldCheck, Server } from 'lucide-react';
-import { ActivityChart } from '@/components/dashboard/activity-chart';
-import { LatestAlerts } from '@/components/dashboard/latest-alerts';
-import { SeverityChart } from '@/components/dashboard/severity-chart';
+import dynamic from 'next/dynamic';
+
+const ActivityChart = dynamic(() => import('@/components/dashboard/activity-chart').then(mod => mod.ActivityChart), {
+    loading: () => <div className="h-[300px] w-full animate-pulse rounded-xl bg-muted" />,
+    ssr: false
+});
+const LatestAlerts = dynamic(() => import('@/components/dashboard/latest-alerts').then(mod => mod.LatestAlerts), {
+    loading: () => <div className="h-[300px] w-full animate-pulse rounded-xl bg-muted" />,
+    ssr: false
+});
+const SeverityChart = dynamic(() => import('@/components/dashboard/severity-chart').then(mod => mod.SeverityChart), {
+    loading: () => <div className="h-[300px] w-full animate-pulse rounded-xl bg-muted" />,
+    ssr: false
+});
+import StatsSkeleton from '@/components/skeletons/stats-skeleton';
 
 interface DashboardStats {
     totalAlerts: number;
@@ -42,7 +54,7 @@ export default function DashboardPage() {
     });
 
     // Fetch initial stats
-    const { data } = useQuery({
+    const { data, isLoading } = useQuery({
         queryKey: ['dashboard-stats'],
         queryFn: async () => {
             const response = await api.get('/dashboard/stats');
@@ -84,52 +96,56 @@ export default function DashboardPage() {
                 <h1 className="text-3xl font-bold tracking-tight">Dashboard Overview</h1>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Alerts</CardTitle>
-                        <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.totalAlerts}</div>
-                        <p className="text-xs text-muted-foreground">
-                            {stats.alertsChange >= 0 ? '+' : ''}{stats.alertsChange} from last hour
-                        </p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Active Events</CardTitle>
-                        <Activity className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.activeEvents}</div>
-                        <p className="text-xs text-muted-foreground">
-                            {stats.eventsChange >= 0 ? '+' : ''}{stats.eventsChange} from last hour
-                        </p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">System Health</CardTitle>
-                        <Server className={`h-4 w-4 ${stats.systemHealth === 'Healthy' ? 'text-green-500' : 'text-red-500'}`} />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.systemHealth}</div>
-                        <p className="text-xs text-muted-foreground">All systems operational</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Active Rules</CardTitle>
-                        <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.activeRules}</div>
-                        <p className="text-xs text-muted-foreground">Detection rules enabled</p>
-                    </CardContent>
-                </Card>
-            </div>
+            {isLoading ? (
+                <StatsSkeleton />
+            ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Total Alerts</CardTitle>
+                            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{stats.totalAlerts}</div>
+                            <p className="text-xs text-muted-foreground">
+                                {stats.alertsChange >= 0 ? '+' : ''}{stats.alertsChange} from last hour
+                            </p>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Active Events</CardTitle>
+                            <Activity className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{stats.activeEvents}</div>
+                            <p className="text-xs text-muted-foreground">
+                                {stats.eventsChange >= 0 ? '+' : ''}{stats.eventsChange} from last hour
+                            </p>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">System Health</CardTitle>
+                            <Server className={`h-4 w-4 ${stats.systemHealth === 'Healthy' ? 'text-green-500' : 'text-red-500'}`} />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{stats.systemHealth}</div>
+                            <p className="text-xs text-muted-foreground">All systems operational</p>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Active Rules</CardTitle>
+                            <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{stats.activeRules}</div>
+                            <p className="text-xs text-muted-foreground">Detection rules enabled</p>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
                 <Card className="col-span-4">
