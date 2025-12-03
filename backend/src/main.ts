@@ -25,7 +25,7 @@ async function bootstrap() {
     // API prefix
     app.setGlobalPrefix('api');
 
-    const port = configService.get('PORT') || 3000;
+    const port = configService.get('PORT') || 3001;
     await app.listen(port);
 
     console.log(`\n🚀 NIDAS Backend running on: http://localhost:${port}/api`);
