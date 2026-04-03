@@ -5,22 +5,16 @@ class AppConstants {
   static final String baseUrl = _determineBaseUrl();
 
   static String _determineBaseUrl() {
-    // Web / desktop / iOS simulators can reach localhost directly
-    if (kIsWeb) {
-      return 'http://localhost:3000/api';
-    }
-    // Android emulator
-    return 'http://10.0.2.2:3000/api';
+    // Production URL
+    return 'https://nidas-backend-production.up.railway.app/api';
   }
 
   // WebSocket URL – same logic (adjust if you use a different WS endpoint)
   static final String wsUrl = _determineWsUrl();
 
   static String _determineWsUrl() {
-    if (kIsWeb) {
-      return 'http://localhost:3000';
-    }
-    return 'http://10.0.2.2:3000';
+    // Production URL
+    return 'https://nidas-backend-production.up.railway.app';
   }
 
   // Storage Keys

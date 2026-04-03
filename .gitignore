@@ -30,19 +30,19 @@ migrate_working_dir/
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-/build/
-/coverage/
+/mobile-app/build/
+/mobile-app/coverage/
 
 # Symbolication related
-app.*.symbols
+/mobile-app/app.*.symbols
 
 # Obfuscation related
-app.*.map.json
+/mobile-app/app.*.map.json
 
 # Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+/mobile-app/android/app/debug
+/mobile-app/android/app/profile
+/mobile-app/android/app/release
 
 # Backend
 backend/node_modules/
