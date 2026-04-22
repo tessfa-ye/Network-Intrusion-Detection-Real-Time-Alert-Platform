@@ -2,20 +2,29 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { SecurityEvent, SecurityEventDocument } from './schemas/event.schema';
+import { AlertsGateway } from '../websocket/alerts.gateway';
 
 @Injectable()
 export class EventsService {
     constructor(
         @InjectModel(SecurityEvent.name)
         private eventModel: Model<SecurityEventDocument>,
+        private alertsGateway: AlertsGateway,
     ) { }
 
     async create(eventData: any): Promise<SecurityEvent> {
         const event = new this.eventModel({
             ...eventData,
-            processed: false,
+            status: 'Pending',
         });
-        return event.save();
+        const savedEvent = await event.save();
+        
+        // Broadcast new event to all subscribers (real-time stream)
+        if (this.alertsGateway) {
+            this.alertsGateway.broadcastNewEvent(savedEvent.toObject());
+        }
+
+        return savedEvent;
     }
 
     async createMany(eventsData: any[]): Promise<any[]> {
@@ -59,17 +68,17 @@ export class EventsService {
 
     async findUnprocessed(limit: number = 100): Promise<any[]> {
         return this.eventModel
-            .find({ processed: false })
+            .find({ status: 'Pending' })
             .sort({ timestamp: 1 })
             .limit(limit)
             .lean()
             .exec();
     }
 
-    async markAsProcessed(ids: string[]): Promise<void> {
+    async markAsProcessed(ids: string[], status: string = 'Processed'): Promise<void> {
         await this.eventModel.updateMany(
             { _id: { $in: ids } },
-            { $set: { processed: true } },
+            { $set: { status: status } },
         );
     }
 }

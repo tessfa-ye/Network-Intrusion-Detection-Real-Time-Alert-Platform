@@ -20,6 +20,10 @@ const SeverityChart = dynamic(() => import('@/components/dashboard/severity-char
     loading: () => <div className="h-[300px] w-full animate-pulse rounded-xl bg-muted" />,
     ssr: false
 });
+const LiveEventFeed = dynamic(() => import('@/components/dashboard/live-event-feed').then(mod => mod.LiveEventFeed), {
+    loading: () => <div className="h-[300px] w-full animate-pulse rounded-xl bg-muted" />,
+    ssr: false
+});
 import StatsSkeleton from '@/components/skeletons/stats-skeleton';
 
 interface DashboardStats {
@@ -80,7 +84,6 @@ export default function DashboardPage() {
             socket.emit('subscribe:stats');
 
             socket.on('stats:updated', (newStats: DashboardStats) => {
-
                 setStats(newStats);
             });
 
@@ -91,19 +94,29 @@ export default function DashboardPage() {
     }, []);
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 pb-12">
             <div className="flex items-center justify-between">
-                <h1 className="text-3xl font-bold tracking-tight">Dashboard Overview</h1>
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Security Operations Center</h1>
+                    <p className="text-muted-foreground">Monitoring real-time network threats and system integrity.</p>
+                </div>
+                <div className="flex gap-2 items-center px-4 py-2 bg-green-500/10 text-green-500 rounded-full border border-green-500/20 text-xs font-bold uppercase tracking-wider">
+                    <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                    </span>
+                    Threat Level: Minimal
+                </div>
             </div>
 
             {isLoading ? (
                 <StatsSkeleton />
             ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <Card>
+                    <Card className="bg-card/50 backdrop-blur-sm">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Total Alerts</CardTitle>
-                            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                            <AlertTriangle className="h-4 w-4 text-orange-500" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{stats.totalAlerts}</div>
@@ -112,10 +125,10 @@ export default function DashboardPage() {
                             </p>
                         </CardContent>
                     </Card>
-                    <Card>
+                    <Card className="bg-card/50 backdrop-blur-sm">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Active Events</CardTitle>
-                            <Activity className="h-4 w-4 text-muted-foreground" />
+                            <Activity className="h-4 w-4 text-blue-500" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{stats.activeEvents}</div>
@@ -124,42 +137,48 @@ export default function DashboardPage() {
                             </p>
                         </CardContent>
                     </Card>
-                    <Card>
+                    <Card className="bg-card/50 backdrop-blur-sm">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">System Health</CardTitle>
                             <Server className={`h-4 w-4 ${stats.systemHealth === 'Healthy' ? 'text-green-500' : 'text-red-500'}`} />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{stats.systemHealth}</div>
-                            <p className="text-xs text-muted-foreground">All systems operational</p>
+                            <p className="text-xs text-muted-foreground">Real-time status</p>
                         </CardContent>
                     </Card>
-                    <Card>
+                    <Card className="bg-card/50 backdrop-blur-sm">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Active Rules</CardTitle>
-                            <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                            <ShieldCheck className="h-4 w-4 text-slate-400" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{stats.activeRules}</div>
-                            <p className="text-xs text-muted-foreground">Detection rules enabled</p>
+                            <p className="text-xs text-muted-foreground">Detection engine active</p>
                         </CardContent>
                     </Card>
                 </div>
             )}
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-                <Card className="col-span-4">
-                    <CardHeader>
-                        <CardTitle>Recent Activity</CardTitle>
+            <div className="grid gap-4 grid-cols-1 lg:grid-cols-7 h-[450px]">
+                <Card className="lg:col-span-4 bg-card/50 backdrop-blur-sm overflow-hidden flex flex-col">
+                    <CardHeader className="py-4">
+                        <CardTitle className="text-md">Network Volume (24h)</CardTitle>
                     </CardHeader>
-                    <CardContent className="pl-2">
+                    <CardContent className="p-0 flex-1">
                         <ActivityChart />
                     </CardContent>
                 </Card>
+                <div className="lg:col-span-3 h-full">
+                    <LiveEventFeed />
+                </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
                 <SeverityChart data={stats.severityDistribution} />
-                <Card className="col-span-3">
+                <Card className="lg:col-span-5 bg-card/50 backdrop-blur-sm">
                     <CardHeader>
-                        <CardTitle>Latest Alerts</CardTitle>
+                        <CardTitle className="text-md">Latest High-Priority Alerts</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <LatestAlerts />

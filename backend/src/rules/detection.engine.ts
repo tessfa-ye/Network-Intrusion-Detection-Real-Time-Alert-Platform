@@ -16,55 +16,81 @@ export class DetectionEngine {
 
     @Cron(CronExpression.EVERY_30_SECONDS)
     async processEvents() {
-        const events = await this.eventsService.findUnprocessed(100);
+        const events = await this.eventsService.findUnprocessed(200); // Larger batch
         if (events.length === 0) return;
 
+        console.log(`🔍 Processing ${events.length} new events...`);
         const rules = await this.rulesService.getEnabledRules();
         const eventIds = events.map(e => (e as any)._id.toString());
 
         for (const rule of rules) {
-            const triggeredEvents = this.evaluateRule(rule, events);
+            const triggeredGroups = await this.evaluateRule(rule, events);
 
-            if (triggeredEvents.length > 0) {
-                await this.createAlert(rule, triggeredEvents);
+            for (const [groupKey, triggeredEvents] of Object.entries(triggeredGroups)) {
+                if (triggeredEvents.length > 0) {
+                    await this.createAlert(rule, triggeredEvents);
+                    
+                    // Mark specifically triggered events as Alerted
+                    const triggeredIds = triggeredEvents.map(e => (e as any)._id.toString());
+                    await this.eventsService.markAsProcessed(triggeredIds, 'Alerted');
+                }
             }
         }
 
-        await this.eventsService.markAsProcessed(eventIds);
+        // Mark remaining non-triggering events as Processed
+        const processedIds = events
+            .filter(e => (e as any).status === 'Pending')
+            .map(e => (e as any)._id.toString());
+            
+        await this.eventsService.markAsProcessed(processedIds, 'Processed');
     }
 
-    private evaluateRule(rule: DetectionRule, events: SecurityEvent[]): SecurityEvent[] {
-        const triggered: SecurityEvent[] = [];
+    private async evaluateRule(
+        rule: DetectionRule,
+        currentEvents: SecurityEvent[]
+    ): Promise<Record<string, SecurityEvent[]>> {
+        const triggeredGroups: Record<string, SecurityEvent[]> = {};
+        const potentialEvents = currentEvents.filter(event => {
+            return rule.conditions.every(cond => {
+                if (cond.eventType && event.eventType !== cond.eventType) return false;
+                const val = this.getFieldValue(event, cond.field);
+                return this.evaluateCondition(val, cond.operator, cond.value);
+            });
+        });
 
-        for (const event of events) {
-            let allConditionsMet = true;
+        if (potentialEvents.length === 0) return {};
 
-            for (const condition of rule.conditions) {
-                if (condition.eventType && event.eventType !== condition.eventType) {
-                    allConditionsMet = false;
-                    break;
+        // Group by Source IP
+        const groups: Record<string, SecurityEvent[]> = {};
+        potentialEvents.forEach(e => {
+            const key = e.sourceIP || 'unknown';
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(e);
+        });
+
+        for (const [ip, groupEvents] of Object.entries(groups)) {
+            const cond = rule.conditions[0];
+            if (cond.threshold && cond.timeWindow) {
+                const startTime = new Date(Date.now() - (cond.timeWindow * 1000));
+                const history = await this.eventsService.findAll({
+                    sourceIP: ip,
+                    eventType: cond.eventType,
+                    timestamp: { $gte: startTime }
+                }, 1000);
+
+                if (history.length >= cond.threshold) {
+                    triggeredGroups[ip] = groupEvents;
                 }
-
-                const fieldValue = this.getFieldValue(event, condition.field);
-
-                if (!this.evaluateCondition(fieldValue, condition.operator, condition.value)) {
-                    allConditionsMet = false;
-                    break;
+            } else if (cond.threshold) {
+                if (groupEvents.length >= cond.threshold) {
+                    triggeredGroups[ip] = groupEvents;
                 }
-            }
-
-            if (allConditionsMet) {
-                triggered.push(event);
+            } else {
+                triggeredGroups[ip] = groupEvents;
             }
         }
 
-        // Check threshold if specified
-        const condition = rule.conditions[0];
-        if (condition.threshold && triggered.length < condition.threshold) {
-            return [];
-        }
-
-        return triggered;
+        return triggeredGroups;
     }
 
     private getFieldValue(event: SecurityEvent, field: string): any {
@@ -96,8 +122,24 @@ export class DetectionEngine {
     }
 
     private async createAlert(rule: DetectionRule, events: SecurityEvent[]) {
-        const eventIds = events.map(e => (e as any)._id);
         const ruleId = (rule as any)._id;
+        const sourceIPs = [...new Set(events.map(e => e.sourceIP))];
+        
+        // Anti-spam: Check if a similar alert was created in the last 5 minutes
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+        const existingAlerts = await this.alertsService.findAll({
+            ruleId,
+            status: 'pending',
+            createdAt: { $gte: fiveMinutesAgo },
+            affectedAssets: { $in: sourceIPs }
+        }, 1);
+
+        if (existingAlerts.length > 0) {
+            console.log(`ℹ️ Skipping duplicate alert for rule ${rule.name}`);
+            return;
+        }
+
+        const eventIds = events.map(e => (e as any)._id);
         const summary = `${rule.name}: ${events.length} event(s) detected`;
 
         await this.alertsService.create({
@@ -107,7 +149,9 @@ export class DetectionEngine {
             severity: rule.severity,
             status: 'pending',
             summary,
-            affectedAssets: [...new Set(events.map(e => e.sourceIP))],
+            affectedAssets: sourceIPs,
         } as any);
+        
+        console.log(`🚩 New Alert created: ${rule.name}`);
     }
 }

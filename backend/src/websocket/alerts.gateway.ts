@@ -57,6 +57,17 @@ export class AlertsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server.emit('system:health', health);
     }
 
+    broadcastNewEvent(event: any) {
+        this.server.to('events').emit('event:new', event);
+    }
+
+    @SubscribeMessage('subscribe:events')
+    handleSubscribeEvents(client: Socket) {
+        client.join('events');
+        console.log(`📡 Client ${client.id} subscribed to live events`);
+        return { event: 'subscribed', data: { channel: 'events' } };
+    }
+
     getConnectedClientsCount(): number {
         return this.connectedClients.size;
     }

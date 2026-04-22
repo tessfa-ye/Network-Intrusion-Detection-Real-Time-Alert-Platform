@@ -46,8 +46,8 @@ export class SecurityEvent {
     @Prop({ type: Object, default: {} })
     metadata: Record<string, any>;
 
-    @Prop({ default: false })
-    processed: boolean;
+    @Prop({ type: String, default: 'Pending', index: true })
+    status: 'Pending' | 'Alerted' | 'Processed' | 'Ignored';
 
     @Prop()
     anomalyScore?: number;

@@ -4,11 +4,14 @@ import { EventsController } from './events.controller';
 import { EventsService } from './events.service';
 import { SecurityEvent, SecurityEventSchema } from './schemas/event.schema';
 
+import { WebsocketModule } from '../websocket/websocket.module';
+
 @Module({
     imports: [
         MongooseModule.forFeature([
             { name: SecurityEvent.name, schema: SecurityEventSchema },
         ]),
+        WebsocketModule,
     ],
     controllers: [EventsController],
     providers: [EventsService],
