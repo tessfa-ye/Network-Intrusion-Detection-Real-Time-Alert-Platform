@@ -11,9 +11,11 @@ export class UsersService {
         private userModel: Model<UserDocument>,
     ) { }
 
-    async create(userData: Partial<User>): Promise<User> {
-        if (userData.passwordHash) {
-            userData.passwordHash = await bcrypt.hash(userData.passwordHash, 10);
+    async create(userData: any): Promise<User> {
+        const password = userData.password || userData.passwordHash;
+        if (password) {
+            userData.passwordHash = await bcrypt.hash(password, 10);
+            delete userData.password;
         }
 
         const user = new this.userModel(userData);
@@ -42,9 +44,11 @@ export class UsersService {
         return this.userModel.findOne({ authProvider: provider, providerId }).exec();
     }
 
-    async update(id: string, updateData: Partial<User>): Promise<User | null> {
-        if (updateData.passwordHash) {
-            updateData.passwordHash = await bcrypt.hash(updateData.passwordHash, 10);
+    async update(id: string, updateData: any): Promise<User | null> {
+        const password = updateData.password || updateData.passwordHash;
+        if (password) {
+            updateData.passwordHash = await bcrypt.hash(password, 10);
+            delete updateData.password;
         }
 
         return this.userModel

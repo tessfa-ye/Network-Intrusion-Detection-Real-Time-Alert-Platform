@@ -11,6 +11,9 @@ export class User {
     @Prop()
     passwordHash?: string;
 
+    // Only used for incoming requests, not stored in DB
+    password?: string;
+
     @Prop({
         required: true,
         enum: ['admin', 'security_officer', 'viewer'],
