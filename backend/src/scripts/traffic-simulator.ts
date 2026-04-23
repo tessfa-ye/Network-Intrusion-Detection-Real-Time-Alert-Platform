@@ -79,20 +79,32 @@ async function simulateRandomTraffic() {
 }
 
 async function run() {
-    console.log('--- NIDAS Traffic Simulator Starting ---');
+    console.log('--- NIDAS Traffic Simulator Starting (Infinite Loop) ---');
 
-    // 1. Send some random background noise
-    for (let i = 0; i < 5; i++) {
-        await simulateRandomTraffic();
+    const EXTENDED_IPS = [
+        '45.77.12.34', '185.22.1.99', '104.21.45.1', '13.107.42.12', 
+        '157.240.22.35', '172.217.14.206', '31.13.71.36', '103.235.46.39',
+        '202.162.247.1'
+    ];
+
+    while (true) {
+        // 1. Send some random background noise
+        for (let i = 0; i < 3; i++) {
+            await simulateRandomTraffic();
+            await new Promise(r => setTimeout(r, 1000));
+        }
+
+        // 2. Trigger a specific rule (Brute Force) from a random IP
+        const bfIP = EXTENDED_IPS[Math.floor(Math.random() * EXTENDED_IPS.length)];
+        await simulateBruteForce(bfIP);
+
+        // 3. Trigger another random high severity event
+        const exIP = EXTENDED_IPS[Math.floor(Math.random() * EXTENDED_IPS.length)];
+        await simulateLargeTransfer(exIP);
+
+        console.log('--- Burst Complete. Waiting for next cycle... ---');
+        await new Promise(r => setTimeout(r, 10000)); // Wait 10s between bursts
     }
-
-    // 2. Trigger a specific rule (Brute Force)
-    await simulateBruteForce('45.77.12.34');
-
-    // 3. Trigger another rule (Exfiltration)
-    await simulateLargeTransfer('192.168.1.10');
-
-    console.log('--- Simulation Complete ---');
 }
 
 run();

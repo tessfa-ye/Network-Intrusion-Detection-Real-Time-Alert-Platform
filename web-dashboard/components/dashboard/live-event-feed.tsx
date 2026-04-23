@@ -25,6 +25,24 @@ export function LiveEventFeed() {
 
     useEffect(() => {
         const socket = getSocket();
+        const token = localStorage.getItem('accessToken');
+        
+        const setupSocket = () => {
+             // Subscribe to the events channel
+             socket.emit('subscribe:events');
+             console.log('📡 Subscribed to live events channel');
+        };
+
+        if (token && !socket.connected) {
+             socket.auth = { token };
+             socket.connect();
+        }
+
+        if (socket.connected) {
+            setupSocket();
+        }
+
+        socket.on('connect', setupSocket);
         
         const handleNewEvent = (event: any) => {
             const newLog: LogEntry = {
@@ -41,7 +59,8 @@ export function LiveEventFeed() {
         socket.on('event:new', handleNewEvent);
         
         return () => {
-            socket.off('event:new');
+            socket.off('connect', setupSocket);
+            socket.off('event:new', handleNewEvent);
         };
     }, []);
 

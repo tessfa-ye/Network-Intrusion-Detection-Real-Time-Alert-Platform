@@ -9,6 +9,8 @@ import { ModeToggle } from '@/components/mode-toggle';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
+import { connectSocket, disconnectSocket } from '@/lib/socket';
+
 export default function DashboardLayout({
     children,
 }: {
@@ -21,10 +23,21 @@ export default function DashboardLayout({
     const logout = useAuthStore((state) => state.logout);
     const [isCollapsed, setIsCollapsed] = useState(false);
 
+    useEffect(() => {
+        const token = localStorage.getItem('accessToken');
+        if (token) {
+            connectSocket(token);
+        }
+        return () => {
+            disconnectSocket();
+        };
+    }, [isAuthenticated]);
+
     const handleLogout = () => {
         logout();
         localStorage.removeItem('accessToken');
         localStorage.removeItem('user');
+        disconnectSocket();
         router.push('/login');
     };
 
