@@ -24,6 +24,10 @@ const LiveEventFeed = dynamic(() => import('@/components/dashboard/live-event-fe
     loading: () => <div className="h-[300px] w-full animate-pulse rounded-xl bg-muted" />,
     ssr: false
 });
+const ThreatMap = dynamic(() => import('@/components/dashboard/threat-map').then(mod => mod.ThreatMap), {
+    loading: () => <div className="h-[300px] w-full animate-pulse rounded-xl bg-muted" />,
+    ssr: false
+});
 import StatsSkeleton from '@/components/skeletons/stats-skeleton';
 
 interface DashboardStats {
@@ -41,7 +45,19 @@ interface DashboardStats {
     };
 }
 
+interface AlertData {
+    _id: string;
+    severity: string;
+    location?: {
+        lat: number;
+        lon: number;
+        city: string;
+        country: string;
+    };
+}
+
 export default function DashboardPage() {
+    const [alerts, setAlerts] = useState<AlertData[]>([]);
     const [stats, setStats] = useState<DashboardStats>({
         totalAlerts: 0,
         activeEvents: 0,
@@ -58,7 +74,7 @@ export default function DashboardPage() {
     });
 
     // Fetch initial stats
-    const { data, isLoading } = useQuery({
+    const { data: statsData, isLoading: isStatsLoading } = useQuery({
         queryKey: ['dashboard-stats'],
         queryFn: async () => {
             const response = await api.get('/dashboard/stats');
@@ -66,11 +82,22 @@ export default function DashboardPage() {
         },
     });
 
+    // Fetch latest alerts for the map
+    const { data: alertsData } = useQuery({
+        queryKey: ['latest-alerts-map'],
+        queryFn: async () => {
+            const response = await api.get('/alerts?limit=50');
+            return response.data as AlertData[];
+        },
+    });
+
     useEffect(() => {
-        if (data) {
-            setStats(data);
-        }
-    }, [data]);
+        if (statsData) setStats(statsData);
+    }, [statsData]);
+
+    useEffect(() => {
+        if (alertsData) setAlerts(alertsData);
+    }, [alertsData]);
 
     // WebSocket real-time updates
     useEffect(() => {
@@ -82,16 +109,33 @@ export default function DashboardPage() {
             socket.connect();
 
             socket.emit('subscribe:stats');
+            socket.emit('subscribe:alerts');
 
             socket.on('stats:updated', (newStats: DashboardStats) => {
                 setStats(newStats);
             });
 
+            socket.on('alert:new', (newAlert: AlertData) => {
+                setAlerts(prev => [newAlert, ...prev].slice(0, 50));
+            });
+
             return () => {
                 socket.off('stats:updated');
+                socket.off('alert:new');
             };
         }
     }, []);
+
+    // Extract points for map
+    const threatPoints = alerts
+        .filter(a => a.location?.lat && a.location?.lon)
+        .map(a => ({
+            id: a._id,
+            lat: a.location!.lat,
+            lon: a.location!.lon,
+            severity: a.severity,
+            city: a.location?.city
+        }));
 
     return (
         <div className="space-y-6 pb-12">
@@ -109,7 +153,7 @@ export default function DashboardPage() {
                 </div>
             </div>
 
-            {isLoading ? (
+            {isStatsLoading ? (
                 <StatsSkeleton />
             ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -160,16 +204,12 @@ export default function DashboardPage() {
                 </div>
             )}
 
-            <div className="grid gap-4 grid-cols-1 lg:grid-cols-7 h-[450px]">
-                <Card className="lg:col-span-4 bg-card/50 backdrop-blur-sm overflow-hidden flex flex-col">
-                    <CardHeader className="py-4">
-                        <CardTitle className="text-md">Network Volume (24h)</CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-0 flex-1">
-                        <ActivityChart />
-                    </CardContent>
-                </Card>
-                <div className="lg:col-span-3 h-full">
+            {/* Main Threat Map Section */}
+            <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
+                <div className="lg:col-span-5">
+                    <ThreatMap threats={threatPoints} />
+                </div>
+                <div className="lg:col-span-2 h-full">
                     <LiveEventFeed />
                 </div>
             </div>

@@ -6,6 +6,7 @@ import { RulesService } from './rules.service';
 import { DetectionEngine } from './detection.engine';
 import { EventsModule } from '../events/events.module';
 import { AlertsModule } from '../alerts/alerts.module';
+import { AnalysisModule } from '../analysis/analysis.module';
 
 @Module({
     imports: [
@@ -14,6 +15,7 @@ import { AlertsModule } from '../alerts/alerts.module';
         ]),
         EventsModule,
         AlertsModule,
+        AnalysisModule,
     ],
     controllers: [RulesController],
     providers: [RulesService, DetectionEngine],

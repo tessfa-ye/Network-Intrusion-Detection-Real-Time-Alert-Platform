@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { SecurityEvent, SecurityEventDocument } from './schemas/event.schema';
 import { AlertsGateway } from '../websocket/alerts.gateway';
+import * as geoip from 'geoip-lite';
 
 @Injectable()
 export class EventsService {
@@ -13,8 +14,22 @@ export class EventsService {
     ) { }
 
     async create(eventData: any): Promise<SecurityEvent> {
+        // Automatically enrich with geo-location if possible
+        const geo = geoip.lookup(eventData.sourceIP);
+        let location = eventData.location;
+
+        if (!location && geo) {
+            location = {
+                country: geo.country,
+                city: geo.city,
+                lat: geo.ll[0],
+                lon: geo.ll[1],
+            };
+        }
+
         const event = new this.eventModel({
             ...eventData,
+            location,
             status: 'Pending',
         });
         const savedEvent = await event.save();

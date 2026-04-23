@@ -5,6 +5,7 @@ import { EventsService } from '../events/events.service';
 import { AlertsService } from '../alerts/alerts.service';
 import { SecurityEvent } from '../events/schemas/event.schema';
 import { DetectionRule } from './schemas/rule.schema';
+import { AnalysisService } from '../analysis/analysis.service';
 
 @Injectable()
 export class DetectionEngine {
@@ -12,6 +13,7 @@ export class DetectionEngine {
         private rulesService: RulesService,
         private eventsService: EventsService,
         private alertsService: AlertsService,
+        private analysisService: AnalysisService,
     ) { }
 
     @Cron(CronExpression.EVERY_30_SECONDS)
@@ -28,7 +30,14 @@ export class DetectionEngine {
 
             for (const [groupKey, triggeredEvents] of Object.entries(triggeredGroups)) {
                 if (triggeredEvents.length > 0) {
-                    await this.createAlert(rule, triggeredEvents);
+                    // Calculate AI Anomaly Score
+                    const anomalyScore = await this.analysisService.calculateAnomalyScore(
+                        groupKey, 
+                        rule.conditions[0].eventType, 
+                        triggeredEvents.length
+                    );
+
+                    await this.createAlert(rule, triggeredEvents, anomalyScore);
                     
                     // Mark specifically triggered events as Alerted
                     const triggeredIds = triggeredEvents.map(e => (e as any)._id.toString());
@@ -50,50 +59,60 @@ export class DetectionEngine {
         currentEvents: SecurityEvent[]
     ): Promise<Record<string, SecurityEvent[]>> {
         const triggeredGroups: Record<string, SecurityEvent[]> = {};
-        const potentialEvents = currentEvents.filter(event => {
-            return rule.conditions.every(cond => {
-                if (cond.eventType && event.eventType !== cond.eventType) return false;
-                const val = this.getFieldValue(event, cond.field);
-                return this.evaluateCondition(val, cond.operator, cond.value);
+        
+        try {
+            const potentialEvents = currentEvents.filter(event => {
+                return rule.conditions.every(cond => {
+                    // Safety check: skip if condition is malformed
+                    if (!cond || !cond.field) return false;
+                    
+                    if (cond.eventType && event.eventType !== cond.eventType) return false;
+                    const val = this.getFieldValue(event, cond.field);
+                    return this.evaluateCondition(val, cond.operator, cond.value);
+                });
             });
-        });
 
-        if (potentialEvents.length === 0) return {};
+            if (potentialEvents.length === 0) return {};
 
-        // Group by Source IP
-        const groups: Record<string, SecurityEvent[]> = {};
-        potentialEvents.forEach(e => {
-            const key = e.sourceIP || 'unknown';
-            if (!groups[key]) groups[key] = [];
-            groups[key].push(e);
-        });
+            // Group by Source IP
+            const groups: Record<string, SecurityEvent[]> = {};
+            potentialEvents.forEach(e => {
+                const key = e.sourceIP || 'unknown';
+                if (!groups[key]) groups[key] = [];
+                groups[key].push(e);
+            });
 
-        for (const [ip, groupEvents] of Object.entries(groups)) {
-            const cond = rule.conditions[0];
-            if (cond.threshold && cond.timeWindow) {
-                const startTime = new Date(Date.now() - (cond.timeWindow * 1000));
-                const history = await this.eventsService.findAll({
-                    sourceIP: ip,
-                    eventType: cond.eventType,
-                    timestamp: { $gte: startTime }
-                }, 1000);
+            for (const [ip, groupEvents] of Object.entries(groups)) {
+                const cond = rule.conditions[0];
+                if (cond && cond.threshold && cond.timeWindow) {
+                    const startTime = new Date(Date.now() - (cond.timeWindow * 1000));
+                    const history = await this.eventsService.findAll({
+                        sourceIP: ip,
+                        eventType: cond.eventType,
+                        timestamp: { $gte: startTime }
+                    }, 1000);
 
-                if (history.length >= cond.threshold) {
+                    if (history.length >= cond.threshold) {
+                        triggeredGroups[ip] = groupEvents;
+                    }
+                } else if (cond && cond.threshold) {
+                    if (groupEvents.length >= cond.threshold) {
+                        triggeredGroups[ip] = groupEvents;
+                    }
+                } else {
                     triggeredGroups[ip] = groupEvents;
                 }
-            } else if (cond.threshold) {
-                if (groupEvents.length >= cond.threshold) {
-                    triggeredGroups[ip] = groupEvents;
-                }
-            } else {
-                triggeredGroups[ip] = groupEvents;
             }
+        } catch (error) {
+            console.error(`❌ Error evaluating rule "${rule.name}":`, error.message);
         }
 
         return triggeredGroups;
     }
 
     private getFieldValue(event: SecurityEvent, field: string): any {
+        if (!field) return undefined;
+        
         const parts = field.split('.');
         let value: any = event;
 
@@ -121,7 +140,7 @@ export class DetectionEngine {
         }
     }
 
-    private async createAlert(rule: DetectionRule, events: SecurityEvent[]) {
+    private async createAlert(rule: DetectionRule, events: SecurityEvent[], anomalyScore: number = 0) {
         const ruleId = (rule as any)._id;
         const sourceIPs = [...new Set(events.map(e => e.sourceIP))];
         
@@ -140,7 +159,10 @@ export class DetectionEngine {
         }
 
         const eventIds = events.map(e => (e as any)._id);
-        const summary = `${rule.name}: ${events.length} event(s) detected`;
+        const summary = `${rule.name}: ${events.length} event(s) detected [Anomaly Score: ${anomalyScore}]`;
+        
+        // Take location from the first event that has one
+        const location = events.find(e => e.location)?.location;
 
         await this.alertsService.create({
             eventIds,
@@ -150,8 +172,10 @@ export class DetectionEngine {
             status: 'pending',
             summary,
             affectedAssets: sourceIPs,
+            anomalyScore,
+            location,
         } as any);
         
-        console.log(`🚩 New Alert created: ${rule.name}`);
+        console.log(`🚩 New Alert created: ${rule.name} (Anomaly: ${anomalyScore})`);
     }
 }

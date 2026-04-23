@@ -51,6 +51,17 @@ export class Alert {
 
     @Prop({ type: [String], default: [] })
     affectedAssets: string[];
+
+    @Prop({ type: Object })
+    location?: {
+        country: string;
+        city: string;
+        lat: number;
+        lon: number;
+    };
+
+    @Prop({ default: 0 })
+    anomalyScore?: number;
 }
 
 export const AlertSchema = SchemaFactory.createForClass(Alert);
