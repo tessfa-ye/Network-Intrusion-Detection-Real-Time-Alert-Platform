@@ -25,9 +25,10 @@ interface ThreatPoint {
 
 interface ThreatMapProps {
   threats: ThreatPoint[];
+  onSelect?: (threat: ThreatPoint) => void;
 }
 
-export function ThreatMap({ threats }: ThreatMapProps) {
+export function ThreatMap({ threats, onSelect }: ThreatMapProps) {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -81,29 +82,32 @@ export function ThreatMap({ threats }: ThreatMapProps) {
         }
       </Geographies>
 
-      {threats.map(({ id, lat, lon, severity, city, country, sourceIP }) => (
-        <Marker key={id} coordinates={[lon, lat]}>
-          <g>
+      {threats.map((threat) => (
+        <Marker key={threat.id} coordinates={[threat.lon, threat.lat]}>
+          <g 
+            className="cursor-pointer group pointer-events-auto"
+            onClick={() => onSelect?.(threat)}
+          >
             <circle
               className="animate-pulse"
-              r={severity === 'critical' ? 8 : 6}
+              r={threat.severity === 'critical' ? 8 : 6}
               fill={
-                severity === 'critical' ? '#ef4444' : 
-                severity === 'high' ? '#f97316' : 
+                threat.severity === 'critical' ? '#ef4444' : 
+                threat.severity === 'high' ? '#f97316' : 
                 '#eab308'
               }
               opacity={0.4}
             />
             <circle
-              r={severity === 'critical' ? 4 : 3}
+              r={threat.severity === 'critical' ? 4 : 3}
               fill={
-                severity === 'critical' ? '#ef4444' : 
-                severity === 'high' ? '#f97316' : 
+                threat.severity === 'critical' ? '#ef4444' : 
+                threat.severity === 'high' ? '#f97316' : 
                 '#eab308'
               }
-              className="cursor-pointer"
+              className="transition-transform group-hover:scale-150 duration-300"
             />
-            <title>{`${severity.toUpperCase()} Attack in ${city || 'Unknown'}${country ? `, ${country}` : ''} (${sourceIP || 'No IP'})`}</title>
+            <title>{`${threat.severity.toUpperCase()} Attack in ${threat.city || 'Unknown'}${threat.country ? `, ${threat.country}` : ''} (${threat.sourceIP || 'No IP'})`}</title>
           </g>
         </Marker>
       ))}

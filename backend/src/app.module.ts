@@ -10,6 +10,7 @@ import { AuthModule } from './auth/auth.module';
 import { WebsocketModule } from './websocket/websocket.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { AnalysisModule } from './analysis/analysis.module';
+import { FirewallModule } from './firewall/firewall.module';
 
 @Module({
     imports: [
@@ -33,6 +34,9 @@ import { AnalysisModule } from './analysis/analysis.module';
         DashboardModule,
         WebsocketModule,
         AnalysisModule,
+        FirewallModule,
     ],
 })
+// Force re-compilation
 export class AppModule { }
+

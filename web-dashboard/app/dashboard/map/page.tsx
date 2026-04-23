@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { getSocket } from '@/lib/socket';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import dynamic from 'next/dynamic';
 import { Globe, ShieldAlert, Activity, Crosshair } from 'lucide-react';
 
@@ -89,14 +90,38 @@ export default function MapPage() {
         return acc;
     }, {} as Record<string, number>);
 
+    const [selectedThreat, setSelectedThreat] = useState<any>(null);
+    const [isBlocking, setIsBlocking] = useState(false);
+
+    const handleBlockIp = async (ip: string) => {
+        if (!confirm(`Are you sure you want to DISCONNECT all traffic from ${ip}? This will activate the hardware-level Kill Switch.`)) return;
+        
+        setIsBlocking(true);
+        try {
+            await api.post('/firewall/block', {
+                ip,
+                reason: 'Manual kill-switch from Geo-Map interface',
+                severity: 'critical'
+            });
+            alert(`IP ${ip} has been successfully blacklisted in the sensor network.`);
+            setSelectedThreat(null);
+        } catch (err: any) {
+            console.error('FAILED TO EXECUTE KILL SWITCH:', err);
+            const errorMsg = err.response?.data?.message || err.message || 'Internal Error';
+            alert(`Failed to execute Kill Switch: ${errorMsg}`);
+        } finally {
+            setIsBlocking(false);
+        }
+    };
+
+    const activeThreats = alerts.filter(a => a.severity === 'critical' || a.severity === 'high').length;
+
     const topRegions = Object.entries(sourceRegions)
         .sort(([, a], [, b]) => b - a)
         .slice(0, 5);
 
-    const activeThreats = alerts.filter(a => a.severity === 'critical' || a.severity === 'high').length;
-
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 relative overflow-hidden">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Geographic Threat Intelligence</h1>
@@ -122,8 +147,46 @@ export default function MapPage() {
             <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
                 <Card className="xl:col-span-3 bg-[#0b1120] border-white/5 overflow-hidden shadow-2xl relative min-h-[500px] lg:min-h-[650px]">
                     <CardContent className="p-0 h-full w-full absolute inset-0">
-                         <ThreatMap threats={threatPoints} />
+                         <ThreatMap threats={threatPoints} onSelect={setSelectedThreat} />
                     </CardContent>
+                    
+                    {/* Selected Threat Overlay */}
+                    {selectedThreat && (
+                        <div className="absolute top-20 right-6 z-30 w-72 bg-[#0b1120]/90 backdrop-blur-xl p-6 rounded-2xl border border-white/10 shadow-2xl animate-in slide-in-from-right-4 duration-300">
+                             <div className="flex justify-between items-start mb-4">
+                                <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400">Threat Detail</h3>
+                                <button onClick={() => setSelectedThreat(null)} className="text-slate-400 hover:text-white">✕</button>
+                             </div>
+                             <div className="space-y-4">
+                                <div>
+                                    <div className="text-xs text-slate-500 uppercase font-bold">Source IP</div>
+                                    <div className="text-lg font-mono font-bold text-blue-400">{selectedThreat.sourceIP}</div>
+                                </div>
+                                <div>
+                                    <div className="text-xs text-slate-500 uppercase font-bold">Location</div>
+                                    <div className="text-sm">{selectedThreat.city}, {selectedThreat.country}</div>
+                                </div>
+                                <div className="pt-2">
+                                    <Button 
+                                        className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-6 rounded-xl shadow-lg shadow-red-900/20 group"
+                                        disabled={isBlocking}
+                                        onClick={() => handleBlockIp(selectedThreat.sourceIP)}
+                                    >
+                                        {isBlocking ? 'Executing...' : (
+                                            <>
+                                                <ShieldAlert className="mr-2 h-5 w-5 group-hover:animate-pulse" />
+                                                ACTIVATE KILL SWITCH
+                                            </>
+                                        )}
+                                    </Button>
+                                    <p className="mt-3 text-[10px] text-center text-slate-500 italic uppercase tracking-tighter">
+                                        Warn: This will block all incoming traffic from this IP.
+                                    </p>
+                                </div>
+                             </div>
+                        </div>
+                    )}
+
                     
                     {/* Floating Legend - Pill Style */}
                     <div className="absolute bottom-6 left-6 z-20 flex flex-wrap gap-2 bg-black/40 backdrop-blur-md p-2 rounded-2xl border border-white/10 sm:rounded-full">

@@ -5,6 +5,7 @@ import { EventsService } from './events.service';
 import { SecurityEvent, SecurityEventSchema } from './schemas/event.schema';
 
 import { WebsocketModule } from '../websocket/websocket.module';
+import { FirewallModule } from '../firewall/firewall.module';
 
 @Module({
     imports: [
@@ -12,6 +13,7 @@ import { WebsocketModule } from '../websocket/websocket.module';
             { name: SecurityEvent.name, schema: SecurityEventSchema },
         ]),
         WebsocketModule,
+        FirewallModule,
     ],
     controllers: [EventsController],
     providers: [EventsService],

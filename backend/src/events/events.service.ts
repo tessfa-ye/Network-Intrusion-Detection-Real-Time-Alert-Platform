@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { SecurityEvent, SecurityEventDocument } from './schemas/event.schema';
 import { AlertsGateway } from '../websocket/alerts.gateway';
+import { FirewallService } from '../firewall/firewall.service';
 import * as geoip from 'geoip-lite';
 
 @Injectable()
@@ -11,9 +12,16 @@ export class EventsService {
         @InjectModel(SecurityEvent.name)
         private eventModel: Model<SecurityEventDocument>,
         private alertsGateway: AlertsGateway,
+        private firewallService: FirewallService,
     ) { }
 
     async create(eventData: any): Promise<SecurityEvent> {
+        // KILL SWITCH: Check if the source IP is blacklisted
+        if (this.firewallService.isIpBlocked(eventData.sourceIP)) {
+            console.log(`🛑 DROP: Blocked IP ${eventData.sourceIP} tried to send event.`);
+            // You can return a special mock object or throw an error to simulate a drop
+            return { ...eventData, status: 'Blocked' } as any; 
+        }
         // Automatically enrich with geo-location if possible
         const geo = geoip.lookup(eventData.sourceIP);
         let location = eventData.location;
