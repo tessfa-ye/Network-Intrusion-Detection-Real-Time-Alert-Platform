@@ -156,7 +156,7 @@ export default function DashboardPage() {
             {isStatsLoading ? (
                 <StatsSkeleton />
             ) : (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                     <Card className="bg-card/50 backdrop-blur-sm">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Total Alerts</CardTitle>
@@ -204,23 +204,34 @@ export default function DashboardPage() {
                 </div>
             )}
 
-            {/* Main Threat Map Section */}
+            {/* Main Overview Section */}
             <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
-                <div className="lg:col-span-5">
-                    <ThreatMap threats={threatPoints} />
-                </div>
-                <div className="lg:col-span-2 h-full">
+                <Card className="col-span-1 lg:col-span-4 bg-card/50 backdrop-blur-sm overflow-hidden flex flex-col">
+                    <CardHeader className="py-4">
+                        <CardTitle className="text-md flex items-center gap-2">
+                             <Activity className="h-4 w-4 text-blue-500" /> Network Volume (24h)
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0 flex-1 min-h-[350px]">
+                        <ActivityChart />
+                    </CardContent>
+                </Card>
+                <div className="col-span-1 lg:col-span-3 w-full h-full min-h-[350px]">
                     <LiveEventFeed />
                 </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-                <SeverityChart data={stats.severityDistribution} />
-                <Card className="lg:col-span-5 bg-card/50 backdrop-blur-sm">
+            <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-7">
+                <div className="col-span-1 lg:col-span-2">
+                   <SeverityChart data={stats.severityDistribution} />
+                </div>
+                <Card className="col-span-1 lg:col-span-5 bg-card/50 backdrop-blur-sm">
                     <CardHeader>
-                        <CardTitle className="text-md">Latest High-Priority Alerts</CardTitle>
+                        <CardTitle className="text-md flex items-center gap-2">
+                             <AlertTriangle className="h-4 w-4 text-orange-500" /> Latest High-Priority Alerts
+                        </CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="overflow-x-auto">
                         <LatestAlerts />
                     </CardContent>
                 </Card>

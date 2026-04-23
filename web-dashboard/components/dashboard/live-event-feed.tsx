@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { getSocket } from '@/lib/socket';
 import { Terminal } from 'lucide-react';
+import { useTheme } from 'next-themes';
 
 interface LogEntry {
     timestamp: string;
@@ -15,6 +16,12 @@ interface LogEntry {
 export function LiveEventFeed() {
     const [logs, setLogs] = useState<LogEntry[]>([]);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const { resolvedTheme } = useTheme();
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     useEffect(() => {
         const socket = getSocket();
@@ -38,20 +45,28 @@ export function LiveEventFeed() {
         };
     }, []);
 
+    const isDark = resolvedTheme === 'dark';
+
     const getSeverityColor = (severity: string) => {
         switch (severity) {
-            case 'critical': return 'text-red-400';
-            case 'high': return 'text-orange-400';
-            case 'medium': return 'text-yellow-400';
-            default: return 'text-green-400';
+            case 'critical': return isDark ? 'text-red-400' : 'text-red-600';
+            case 'high': return isDark ? 'text-orange-400' : 'text-orange-600';
+            case 'medium': return isDark ? 'text-yellow-400' : 'text-yellow-600';
+            default: return isDark ? 'text-green-400' : 'text-green-600';
         }
     };
 
+    if (!mounted) return <div className="h-full w-full animate-pulse rounded-xl bg-muted" />;
+
     return (
-        <div className="flex flex-col h-full bg-slate-950 rounded-xl border border-slate-800 overflow-hidden font-mono text-xs shadow-2xl">
-            <div className="flex items-center gap-2 px-4 py-2 bg-slate-900 border-b border-slate-800">
-                <Terminal className="w-4 h-4 text-slate-400" />
-                <span className="text-slate-200 uppercase tracking-widest text-[10px] font-bold">Live Traffic Stream</span>
+        <div className={`flex flex-col h-full rounded-xl border overflow-hidden font-mono text-[10px] shadow-2xl transition-colors duration-500 ${
+            isDark ? 'bg-slate-950 border-slate-800' : 'bg-white border-slate-200'
+        }`}>
+            <div className={`flex items-center gap-2 px-4 py-2 border-b transition-colors duration-500 ${
+                isDark ? 'bg-slate-900 border-slate-800 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'
+            }`}>
+                <Terminal className={`w-3.5 h-3.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} />
+                <span className="uppercase tracking-widest font-bold">Live Traffic Stream</span>
                 <div className="ml-auto flex gap-1">
                     <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                 </div>
@@ -59,19 +74,23 @@ export function LiveEventFeed() {
             
             <div 
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto p-4 space-y-1 scrollbar-hide bg-black/40"
+                className={`flex-1 overflow-y-auto p-4 space-y-1.5 scrollbar-hide transition-colors duration-500 ${
+                    isDark ? 'bg-black/40' : 'bg-slate-50'
+                }`}
             >
                 {logs.length === 0 && (
-                    <div className="text-slate-600 italic">Awaiting connection to sensor network...</div>
+                    <div className={`italic ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>Awaiting connection to sensor network...</div>
                 )}
                 {logs.map((log, i) => (
-                    <div key={i} className="flex gap-3 hover:bg-slate-900/50 transition-colors py-0.5 px-1 rounded animate-in fade-in slide-in-from-left-2 duration-300">
-                        <span className="text-slate-500 shrink-0">{log.timestamp}</span>
+                    <div key={i} className={`flex gap-3 transition-colors py-0.5 px-2 rounded animate-in fade-in slide-in-from-left-1 duration-300 ${
+                        isDark ? 'hover:bg-white/5' : 'hover:bg-black/5'
+                    }`}>
+                        <span className={`${isDark ? 'text-slate-500' : 'text-slate-400'} shrink-0`}>[{log.timestamp}]</span>
                         <span className={`font-bold shrink-0 uppercase w-16 ${getSeverityColor(log.severity)}`}>
                             {log.type}
                         </span>
-                        <span className="text-blue-400 shrink-0">{log.source}</span>
-                        <span className="text-slate-300 truncate">{log.message}</span>
+                        <span className={`${isDark ? 'text-blue-400' : 'text-blue-600'} shrink-0 font-bold`}>{log.source}</span>
+                        <span className={`truncate ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{log.message}</span>
                     </div>
                 ))}
             </div>

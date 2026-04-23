@@ -149,3 +149,14 @@
     background: hsl(var(--border));
   }
 }
+
+/* Force hide Next.js Dev Indicators (The "N" icon) */
+nextjs-portal,
+#nextjs-static-indicator-container,
+[data-nextjs-toast],
+[data-nextjs-static-indicator] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
