@@ -1,15 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { getSocket } from '@/lib/socket';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import { Globe, ShieldAlert, Activity } from 'lucide-react';
 import { toast } from 'sonner';
 import { ForensicTimeline } from '@/components/dashboard/forensic-timeline';
+import { ReputationIntelligence } from '@/components/dashboard/reputation-intelligence';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -41,6 +43,8 @@ interface AlertData {
 }
 
 export default function MapPage() {
+    const router = useRouter();
+    const queryClient = useQueryClient();
     const [alerts, setAlerts] = useState<AlertData[]>([]);
     const [selectedThreat, setSelectedThreat] = useState<any>(null);
     const [isBlocking, setIsBlocking] = useState(false);
@@ -51,6 +55,15 @@ export default function MapPage() {
         queryFn: async () => {
             const response = await api.get('/alerts?limit=100');
             return response.data as AlertData[];
+        },
+    });
+
+    // Check blacklist to see if threats are already neutralized
+    const { data: blacklist = [] } = useQuery({
+        queryKey: ['firewall-blacklist'],
+        queryFn: async () => {
+            const response = await api.get('/firewall/blacklist');
+            return response.data;
         },
     });
 
@@ -119,7 +132,11 @@ export default function MapPage() {
                 id: toastId,
                 description: 'The sensor network is now dropping all packets from this source.',
             });
-            setSelectedThreat(null);
+            
+            // Instantly refresh the blacklist state so the button changes
+            queryClient.invalidateQueries({ queryKey: ['firewall-blacklist'] });
+            
+            // Keep the panel open so user sees the "Already Blocked" state transition!
             setIpToBlock(null);
         } catch (err: any) {
             const errorMsg = err.response?.data?.message || err.message || 'Internal Error';
@@ -173,9 +190,9 @@ export default function MapPage() {
                     </CardContent>
 
                     {selectedThreat && (
-                        <div className="absolute top-20 right-6 z-30 w-80 md:w-96 h-[calc(100vh-140px)] max-h-[650px] bg-white/95 dark:bg-[#0b1120]/95 backdrop-blur-2xl p-6 rounded-2xl border border-slate-200 dark:border-white/10 shadow-2xl animate-in slide-in-from-right-4 duration-300 flex flex-col overflow-hidden">
+                        <div className="absolute top-10 md:top-15 right-4 md:right-6 z-30 w-80 md:w-96 h-[calc(100vh-100px)] md:h-[calc(100vh-140px)] bg-white/95 dark:bg-[#0b1120]/95 backdrop-blur-2xl p-5 rounded-2xl border border-slate-200 dark:border-white/10 shadow-2xl animate-in slide-in-from-right-4 duration-300 flex flex-col overflow-hidden">
                             {/* Header - Fixed */}
-                            <div className="flex justify-between items-start mb-6 shrink-0 border-b border-slate-100 dark:border-white/5 pb-4">
+                            <div className="flex justify-between items-start mb-4 shrink-0 border-b border-slate-100 dark:border-white/5 pb-3">
                                 <div className="space-y-1">
                                     <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 flex items-center gap-2">
                                         <ShieldAlert className="h-4 w-4 text-red-500" />
@@ -185,26 +202,30 @@ export default function MapPage() {
                                 </div>
                                 <button onClick={() => setSelectedThreat(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white bg-slate-100 dark:bg-white/5 p-1 rounded-full">✕</button>
                             </div>
-                            
+
                             {/* Content Wrapper */}
-                            <div className="flex-1 min-h-0 flex flex-col space-y-6 overflow-hidden">
-                                {/* Location & Severity - Fixed */}
-                                <div className="grid grid-cols-2 gap-4 bg-slate-50 dark:bg-white/5 p-3 rounded-xl border border-black/5 dark:border-white/5 shrink-0">
+                            <div className="flex-1 min-h-0 flex flex-col space-y-4 overflow-hidden">
+                                {/* Stats - Fixed */}
+                                <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-white/5 p-3 rounded-xl border border-black/5 dark:border-white/5 shrink-0">
                                     <div>
                                         <div className="text-[10px] text-slate-500 dark:text-slate-500 uppercase font-bold tracking-tight">Location</div>
-                                        <div className="text-sm text-slate-900 dark:text-white font-semibold truncate">
+                                        <div className="text-sm text-slate-900 dark:text-white font-semibold truncate text-ellipsis overflow-hidden">
                                             {selectedThreat.city}, {selectedThreat.country}
                                         </div>
                                     </div>
                                     <div>
                                         <div className="text-[10px] text-slate-500 dark:text-slate-500 uppercase font-bold tracking-tight">Severity</div>
-                                        <div className={`text-sm font-bold uppercase tracking-tighter ${
-                                            selectedThreat.severity === 'critical' ? 'text-red-500' :
+                                        <div className={`text-sm font-bold uppercase tracking-tighter ${selectedThreat.severity === 'critical' ? 'text-red-500' :
                                             selectedThreat.severity === 'high' ? 'text-orange-500' : 'text-yellow-500'
-                                        }`}>
+                                            }`}>
                                             {selectedThreat.severity}
                                         </div>
                                     </div>
+                                </div>
+
+                                {/* Global Recon / Reputation */}
+                                <div className="shrink-0">
+                                    <ReputationIntelligence sourceIP={selectedThreat.sourceIP} />
                                 </div>
 
                                 {/* Forensic Timeline - Forced Scrollable */}
@@ -213,17 +234,29 @@ export default function MapPage() {
                                 </div>
 
                                 {/* Footer Action - Fixed */}
-                                <div className="pt-4 border-t border-slate-100 dark:border-white/5 shrink-0">
-                                    <Button
-                                        className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-6 rounded-xl shadow-lg shadow-red-900/20 group uppercase tracking-widest text-xs"
-                                        disabled={isBlocking}
-                                        onClick={() => setIpToBlock(selectedThreat.sourceIP)}
-                                    >
-                                        <ShieldAlert className="mr-2 h-5 w-5 group-hover:animate-pulse" />
-                                        Activate Kill Switch
-                                    </Button>
-                                    <p className="mt-3 text-[10px] text-center text-slate-400 italic font-medium uppercase tracking-tighter leading-tight px-4">
-                                        Note: Disconnects all traffic from this source.
+                                <div className="pt-3 border-t border-slate-100 dark:border-white/5 shrink-0 mt-auto">
+                                    {blacklist?.some((b: any) => b.ip === selectedThreat.sourceIP) ? (
+                                        <Button
+                                            className="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white font-bold py-5 rounded-xl uppercase tracking-widest text-xs"
+                                            onClick={() => router.push('/dashboard/firewall')}
+                                        >
+                                            <ShieldAlert className="mr-2 h-4 w-4" />
+                                            Already Blocked - Manage
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-5 rounded-xl shadow-lg shadow-red-900/20 group uppercase tracking-widest text-xs"
+                                            disabled={isBlocking}
+                                            onClick={() => setIpToBlock(selectedThreat.sourceIP)}
+                                        >
+                                            <ShieldAlert className="mr-2 h-4 w-4 group-hover:animate-pulse" />
+                                            Activate Kill Switch
+                                        </Button>
+                                    )}
+                                    <p className="mt-2 text-[10px] text-center text-slate-400 italic font-medium uppercase tracking-tighter leading-tight px-2">
+                                        {blacklist?.some((b: any) => b.ip === selectedThreat.sourceIP) 
+                                            ? "This source is already neutralized by the firewall." 
+                                            : "Note: Disconnects all traffic from this source."}
                                     </p>
                                 </div>
                             </div>

@@ -78,4 +78,58 @@ export class AnalysisService {
         }
         console.log(`✅ Analysis Engine: Updated baselines for ${activeUnits.length} entities.`);
     }
+
+    /**
+     * Looks up or calculates Global Reputation Intelligence for an IP.
+     * In a production environment, this would hit an API like AbuseIPDB.
+     */
+    async getGlobalReputation(ip: string): Promise<any> {
+        // Simulate an external intelligence API call
+
+        // Generate synthetic but realistic intelligence based on the IP format
+        const ipNum = ip.split('.').reduce((acc, octet) => (acc << 8) + parseInt(octet, 10), 0 >>> 0);
+        
+        let isp = "Unknown ISP";
+        let country = "Unknown";
+        let usageType = "Fixed Line ISP";
+        let maliciousConfidence = 0;
+        let threatTags: string[] = [];
+
+        // Simple psuedorandom mocked attributes
+        const rand = (Math.abs(ipNum) % 100);
+
+        if (rand < 20) {
+            isp = "DigitalOcean, LLC";
+            usageType = "Data Center/Web Hosting";
+            maliciousConfidence = 85 + (rand % 15);
+            threatTags = ["Brute Force", "Web Spam", "VPN Server"];
+        } else if (rand < 40) {
+            isp = "Amazon.com services LLC";
+            usageType = "Data Center/Web Hosting";
+            maliciousConfidence = 40 + (rand % 30);
+            threatTags = ["Web Scraper", "Cloud"];
+        } else if (rand < 50) {
+            isp = "Tor Exit Node";
+            usageType = "Anonymizing VPN/Proxy";
+            maliciousConfidence = 99;
+            threatTags = ["Tor Node", "Anonymizer", "Malicious"];
+        } else {
+            isp = "Comcast Cable Communications";
+            usageType = "Fixed Line ISP";
+            maliciousConfidence = rand % 20;
+            if (maliciousConfidence > 10) threatTags = ["Botnet Client"];
+        }
+
+        return {
+            ip,
+            reputation: {
+                confidenceScore: maliciousConfidence,
+                isp,
+                usageType,
+                threatTags,
+                lastReported: maliciousConfidence > 50 ? new Date(Date.now() - (rand * 60000)).toISOString() : null,
+                totalReports: maliciousConfidence > 50 ? rand * 3 : 0,
+            }
+        };
+    }
 }

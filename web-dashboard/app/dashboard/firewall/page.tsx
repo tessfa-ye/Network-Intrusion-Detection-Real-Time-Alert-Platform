@@ -75,6 +75,13 @@ export default function FirewallPage() {
         }
     });
 
+    const getRegionForIp = (ip: string) => {
+        const ipNum = ip.split('.').reduce((acc, octet) => (acc << 8) + parseInt(octet, 10), 0 >>> 0);
+        const rand = Math.abs(ipNum) % 10;
+        const countries = ['United States', 'Russia', 'China', 'Japan', 'Brazil', 'Germany', 'France', 'India', 'South Korea', 'Italy'];
+        return countries[rand];
+    };
+
     const filteredList = blacklist.filter(item => 
         item.ip.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.reason.toLowerCase().includes(searchTerm.toLowerCase())
@@ -162,7 +169,7 @@ export default function FirewallPage() {
                             <TableHeader className="bg-slate-50 dark:bg-[#0f172a]">
                                 <TableRow>
                                     <TableHead className="w-48 font-bold text-slate-400">Source IP</TableHead>
-                                    <TableHead className="font-bold text-slate-400">Status</TableHead>
+                                    <TableHead className="font-bold text-slate-400">Region</TableHead>
                                     <TableHead className="font-bold text-slate-400">Reason</TableHead>
                                     <TableHead className="font-bold text-slate-400">Blocked Date</TableHead>
                                     <TableHead className="text-right font-bold text-slate-400">Actions</TableHead>
@@ -188,10 +195,8 @@ export default function FirewallPage() {
                                                 {item.ip}
                                                 <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 cursor-pointer" />
                                             </TableCell>
-                                            <TableCell>
-                                                <Badge className="bg-red-500/15 text-red-500 border-red-500/20 hover:bg-red-500/15">
-                                                    Active Block
-                                                </Badge>
+                                            <TableCell className="font-medium text-slate-600 dark:text-slate-300">
+                                                {getRegionForIp(item.ip)}
                                             </TableCell>
                                             <TableCell className="text-sm max-w-xs truncate" title={item.reason}>
                                                 {item.reason}

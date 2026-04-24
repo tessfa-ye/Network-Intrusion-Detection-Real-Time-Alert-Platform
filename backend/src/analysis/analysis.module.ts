@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AnalysisService } from './analysis.service';
+import { AnalysisController } from './analysis.controller';
 import { IPBaseline, IPBaselineSchema } from './schemas/baseline.schema';
 import { SecurityEvent, SecurityEventSchema } from '../events/schemas/event.schema';
 
@@ -11,6 +12,7 @@ import { SecurityEvent, SecurityEventSchema } from '../events/schemas/event.sche
             { name: SecurityEvent.name, schema: SecurityEventSchema },
         ]),
     ],
+    controllers: [AnalysisController],
     providers: [AnalysisService],
     exports: [AnalysisService],
 })
