@@ -34,6 +34,7 @@ const formSchema = z.object({
     description: z.string().min(1, 'Description is required'),
     severity: z.enum(['low', 'medium', 'high', 'critical']),
     enabled: z.boolean(),
+    autoBlock: z.boolean(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -48,6 +49,11 @@ export function RuleForm({ rule, onSuccess }: RuleFormProps) {
     const isEditing = !!rule;
     const [conditions, setConditions] = useState<RuleConditionGroup>(() => {
         if (rule?.conditions && Array.isArray(rule.conditions) && rule.conditions.length > 0) {
+            const firstCond = rule.conditions[0];
+            // If it's already a group (new format), use it directly
+            if (firstCond && typeof firstCond === 'object' && firstCond.type === 'group') {
+                return firstCond as RuleConditionGroup;
+            }
             return convertLegacyConditions(rule.conditions);
         }
         return emptyGroup();
@@ -60,6 +66,7 @@ export function RuleForm({ rule, onSuccess }: RuleFormProps) {
             description: '',
             severity: 'medium',
             enabled: true,
+            autoBlock: false,
         },
     });
 
@@ -70,9 +77,15 @@ export function RuleForm({ rule, onSuccess }: RuleFormProps) {
                 description: rule.description,
                 severity: rule.severity,
                 enabled: rule.enabled,
+                autoBlock: (rule as any).autoBlock || false,
             });
             if (rule.conditions && Array.isArray(rule.conditions) && rule.conditions.length > 0) {
-                setConditions(convertLegacyConditions(rule.conditions));
+                const firstCond = rule.conditions[0];
+                if (firstCond && typeof firstCond === 'object' && firstCond.type === 'group') {
+                    setConditions(firstCond as RuleConditionGroup);
+                } else {
+                    setConditions(convertLegacyConditions(rule.conditions));
+                }
             } else {
                 setConditions(emptyGroup());
             }
@@ -83,6 +96,7 @@ export function RuleForm({ rule, onSuccess }: RuleFormProps) {
                 description: '',
                 severity: 'medium',
                 enabled: true,
+                autoBlock: false,
             });
             setConditions(emptyGroup());
         }
@@ -222,6 +236,26 @@ export function RuleForm({ rule, onSuccess }: RuleFormProps) {
                             </div>
                             <FormControl>
                                 <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
+                        </FormItem>
+                    )}
+                />
+
+                <FormField
+                    control={form.control}
+                    name="autoBlock"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border-2 border-purple-500/20 p-5 bg-gradient-to-br from-purple-500/5 to-purple-500/10 dark:from-purple-500/10 dark:to-bg-[#020617]">
+                            <div className="space-y-0.5">
+                                <FormLabel className="text-base font-semibold text-purple-500 flex items-center gap-2">
+                                    Autonomous Threat Neutralization (SOAR)
+                                </FormLabel>
+                                <FormDescription>
+                                    Automatically pull the Kill Switch for any IP that triggers this rule.
+                                </FormDescription>
+                            </div>
+                            <FormControl>
+                                <Switch checked={field.value} onCheckedChange={field.onChange} className="data-[state=checked]:bg-purple-600" />
                             </FormControl>
                         </FormItem>
                     )}

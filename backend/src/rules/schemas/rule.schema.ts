@@ -28,10 +28,10 @@ export class DetectionRule {
     @Prop({ default: true })
     enabled: boolean;
 
-    @Prop({
-        required: true,
-        enum: ['low', 'medium', 'high', 'critical'],
-    })
+    @Prop({ default: false })
+    autoBlock: boolean;
+
+    @Prop({ type: String, enum: ['low', 'medium', 'high', 'critical'], default: 'medium' })
     severity: string;
 
     @Prop({

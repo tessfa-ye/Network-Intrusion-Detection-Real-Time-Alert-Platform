@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import dynamic from 'next/dynamic';
 import { Globe, ShieldAlert, Activity } from 'lucide-react';
 import { toast } from 'sonner';
+import { ForensicTimeline } from '@/components/dashboard/forensic-timeline';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -164,39 +165,65 @@ export default function MapPage() {
             <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
                 <Card className="xl:col-span-3 bg-[#0b1120] border-white/5 overflow-hidden shadow-2xl relative min-h-[500px] lg:min-h-[650px]">
                     <CardContent className="p-0 h-full w-full absolute inset-0">
-                        <ThreatMap 
-                            threats={threatPoints} 
-                            onSelect={setSelectedThreat} 
+                        <ThreatMap
+                            threats={threatPoints}
+                            onSelect={setSelectedThreat}
                             onDeselect={() => setSelectedThreat(null)}
                         />
                     </CardContent>
 
                     {selectedThreat && (
-                        <div className="absolute top-20 right-6 z-30 w-72 bg-white/95 dark:bg-[#0b1120]/90 backdrop-blur-xl p-6 rounded-2xl border border-slate-200 dark:border-white/10 shadow-2xl animate-in slide-in-from-right-4 duration-300">
-                            <div className="flex justify-between items-start mb-4">
-                                <h3 className="text-sm font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Threat Detail</h3>
-                                <button onClick={() => setSelectedThreat(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white">✕</button>
+                        <div className="absolute top-20 right-6 z-30 w-80 md:w-96 h-[calc(100vh-140px)] max-h-[650px] bg-white/95 dark:bg-[#0b1120]/95 backdrop-blur-2xl p-6 rounded-2xl border border-slate-200 dark:border-white/10 shadow-2xl animate-in slide-in-from-right-4 duration-300 flex flex-col overflow-hidden">
+                            {/* Header - Fixed */}
+                            <div className="flex justify-between items-start mb-6 shrink-0 border-b border-slate-100 dark:border-white/5 pb-4">
+                                <div className="space-y-1">
+                                    <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                                        <ShieldAlert className="h-4 w-4 text-red-500" />
+                                        Threat Intelligence
+                                    </h3>
+                                    <div className="text-xl font-mono font-bold text-blue-600 dark:text-blue-400">{selectedThreat.sourceIP}</div>
+                                </div>
+                                <button onClick={() => setSelectedThreat(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white bg-slate-100 dark:bg-white/5 p-1 rounded-full">✕</button>
                             </div>
-                            <div className="space-y-4">
-                                <div>
-                                    <div className="text-xs text-slate-500 dark:text-slate-500 uppercase font-bold">Source IP</div>
-                                    <div className="text-lg font-mono font-bold text-blue-600 dark:text-blue-400">{selectedThreat.sourceIP}</div>
+                            
+                            {/* Content Wrapper */}
+                            <div className="flex-1 min-h-0 flex flex-col space-y-6 overflow-hidden">
+                                {/* Location & Severity - Fixed */}
+                                <div className="grid grid-cols-2 gap-4 bg-slate-50 dark:bg-white/5 p-3 rounded-xl border border-black/5 dark:border-white/5 shrink-0">
+                                    <div>
+                                        <div className="text-[10px] text-slate-500 dark:text-slate-500 uppercase font-bold tracking-tight">Location</div>
+                                        <div className="text-sm text-slate-900 dark:text-white font-semibold truncate">
+                                            {selectedThreat.city}, {selectedThreat.country}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div className="text-[10px] text-slate-500 dark:text-slate-500 uppercase font-bold tracking-tight">Severity</div>
+                                        <div className={`text-sm font-bold uppercase tracking-tighter ${
+                                            selectedThreat.severity === 'critical' ? 'text-red-500' :
+                                            selectedThreat.severity === 'high' ? 'text-orange-500' : 'text-yellow-500'
+                                        }`}>
+                                            {selectedThreat.severity}
+                                        </div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <div className="text-xs text-slate-500 dark:text-slate-500 uppercase font-bold">Location</div>
-                                    <div className="text-sm text-slate-900 dark:text-white font-medium">{selectedThreat.city}, {selectedThreat.country}</div>
+
+                                {/* Forensic Timeline - Forced Scrollable */}
+                                <div className="flex-1 min-h-0 overflow-hidden relative">
+                                    <ForensicTimeline sourceIP={selectedThreat.sourceIP} />
                                 </div>
-                                <div className="pt-2">
+
+                                {/* Footer Action - Fixed */}
+                                <div className="pt-4 border-t border-slate-100 dark:border-white/5 shrink-0">
                                     <Button
-                                        className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-6 rounded-xl shadow-lg shadow-red-900/20 group"
+                                        className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-6 rounded-xl shadow-lg shadow-red-900/20 group uppercase tracking-widest text-xs"
                                         disabled={isBlocking}
                                         onClick={() => setIpToBlock(selectedThreat.sourceIP)}
                                     >
                                         <ShieldAlert className="mr-2 h-5 w-5 group-hover:animate-pulse" />
-                                        ACTIVATE KILL SWITCH
+                                        Activate Kill Switch
                                     </Button>
-                                    <p className="mt-3 text-[10px] text-center text-slate-500 italic uppercase tracking-tighter">
-                                        Warn: This will block all incoming traffic from this IP.
+                                    <p className="mt-3 text-[10px] text-center text-slate-400 italic font-medium uppercase tracking-tighter leading-tight px-4">
+                                        Note: Disconnects all traffic from this source.
                                     </p>
                                 </div>
                             </div>

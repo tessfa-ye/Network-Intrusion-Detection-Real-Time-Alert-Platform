@@ -158,8 +158,8 @@ export default function RulesPage() {
                                 <TableRow>
                                     <TableHead>Name</TableHead>
                                     <TableHead>Severity</TableHead>
-                                    <TableHead>Description</TableHead>
                                     <TableHead>Status</TableHead>
+                                    <TableHead>Auto-Block</TableHead>
                                     <TableHead>Created</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
@@ -167,28 +167,37 @@ export default function RulesPage() {
                             <TableBody>
                                 {!rules || rules.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="text-center text-muted-foreground">
+                                        <TableCell colSpan={7} className="text-center text-muted-foreground">
                                             No detection rules configured
                                         </TableCell>
                                     </TableRow>
                                 ) : (
                                     rules.map((rule) => (
                                         <TableRow key={rule._id}>
-                                            <TableCell className="font-medium">{rule.name}</TableCell>
+                                            <TableCell className="font-medium">
+                                                <div>{rule.name}</div>
+                                                <div className="text-[10px] text-muted-foreground truncate max-w-[200px]">{rule.description}</div>
+                                            </TableCell>
                                             <TableCell>
                                                 <Badge className={severityColors[rule.severity]}>
                                                     {rule.severity.toUpperCase()}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className="max-w-md truncate">{rule.description}</TableCell>
                                             <TableCell>
                                                 {rule.enabled ? (
-                                                    <Badge variant="outline" className="bg-green-500">Enabled</Badge>
+                                                    <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">Enabled</Badge>
                                                 ) : (
-                                                    <Badge variant="outline" className="bg-gray-400">Disabled</Badge>
+                                                    <Badge variant="outline" className="bg-gray-400/10 text-gray-400 border-gray-400/20">Disabled</Badge>
                                                 )}
                                             </TableCell>
-                                            <TableCell>{new Date(rule.createdAt).toLocaleString()}</TableCell>
+                                            <TableCell>
+                                                {(rule as any).autoBlock ? (
+                                                    <Badge className="bg-purple-500/10 text-purple-500 border-purple-500/20">Active Defense</Badge>
+                                                ) : (
+                                                    <span className="text-[10px] text-muted-foreground italic">Alert Only</span>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="text-xs text-muted-foreground">{new Date(rule.createdAt).toLocaleDateString()}</TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex justify-end gap-2">
                                                     <Button

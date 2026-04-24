@@ -6,6 +6,7 @@ import { AlertsService } from '../alerts/alerts.service';
 import { SecurityEvent } from '../events/schemas/event.schema';
 import { DetectionRule } from './schemas/rule.schema';
 import { AnalysisService } from '../analysis/analysis.service';
+import { FirewallService } from '../firewall/firewall.service';
 
 @Injectable()
 export class DetectionEngine {
@@ -14,6 +15,7 @@ export class DetectionEngine {
         private eventsService: EventsService,
         private alertsService: AlertsService,
         private analysisService: AnalysisService,
+        private firewallService: FirewallService,
     ) { }
 
     @Cron(CronExpression.EVERY_30_SECONDS)
@@ -23,7 +25,6 @@ export class DetectionEngine {
 
         console.log(`🔍 Processing ${events.length} new events...`);
         const rules = await this.rulesService.getEnabledRules();
-        const eventIds = events.map(e => (e as any)._id.toString());
 
         for (const rule of rules) {
             const triggeredGroups = await this.evaluateRule(rule, events);
@@ -38,6 +39,16 @@ export class DetectionEngine {
                     );
 
                     await this.createAlert(rule, triggeredEvents, anomalyScore);
+
+                    // AUTO BLOCK: If the rule has autoBlock enabled, neutralize the IP instantly
+                    if (rule.autoBlock && groupKey !== 'unknown') {
+                        console.log(`🤖 SOAR: Auto-blocking IP ${groupKey} due to rule "${rule.name}"`);
+                        await this.firewallService.blockIp(
+                            groupKey, 
+                            `Automated response triggered by rule: ${rule.name}`, 
+                            rule.severity
+                        );
+                    }
                     
                     // Mark specifically triggered events as Alerted
                     const triggeredIds = triggeredEvents.map(e => (e as any)._id.toString());

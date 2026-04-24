@@ -7,6 +7,7 @@ import { DetectionEngine } from './detection.engine';
 import { EventsModule } from '../events/events.module';
 import { AlertsModule } from '../alerts/alerts.module';
 import { AnalysisModule } from '../analysis/analysis.module';
+import { FirewallModule } from '../firewall/firewall.module';
 
 @Module({
     imports: [
@@ -16,6 +17,7 @@ import { AnalysisModule } from '../analysis/analysis.module';
         EventsModule,
         AlertsModule,
         AnalysisModule,
+        FirewallModule,
     ],
     controllers: [RulesController],
     providers: [RulesService, DetectionEngine],
