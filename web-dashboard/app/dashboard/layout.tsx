@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
-import { LayoutDashboard, AlertTriangle, ShieldCheck, Settings, Users, LogOut, ChevronLeft, ChevronRight, Globe, Activity } from 'lucide-react';
+import { LayoutDashboard, AlertTriangle, ShieldCheck, Settings, Users, LogOut, ChevronLeft, ChevronRight, Globe, Activity, ShieldAlert } from 'lucide-react';
 import { ModeToggle } from '@/components/mode-toggle';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
@@ -54,6 +54,7 @@ export default function DashboardLayout({
         { name: 'Events', href: '/dashboard/events', icon: Activity },
         { name: 'Rules', href: '/dashboard/rules', icon: ShieldCheck },
         { name: 'Users', href: '/dashboard/users', icon: Users },
+        { name: 'Firewall', href: '/dashboard/firewall', icon: ShieldAlert },
         { name: 'Geo Map', href: '/dashboard/map', icon: Globe },
     ];
 

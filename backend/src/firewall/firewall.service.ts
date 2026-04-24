@@ -42,7 +42,7 @@ export class FirewallService implements OnModuleInit {
     }
 
     async unblockIp(ip: string): Promise<void> {
-        await this.blacklistModel.updateOne({ ip }, { isActive: false });
+        await this.blacklistModel.deleteOne({ ip });
         this.cachedBlacklist.delete(ip);
     }
 

@@ -26,9 +26,10 @@ interface ThreatPoint {
 interface ThreatMapProps {
   threats: ThreatPoint[];
   onSelect?: (threat: ThreatPoint) => void;
+  onDeselect?: () => void;
 }
 
-export function ThreatMap({ threats, onSelect }: ThreatMapProps) {
+export function ThreatMap({ threats, onSelect, onDeselect }: ThreatMapProps) {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -72,6 +73,10 @@ export function ThreatMap({ threats, onSelect }: ThreatMapProps) {
               fill={colors.land}
               stroke={colors.border}
               strokeWidth={0.3}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeselect?.();
+              }}
               style={{
                 default: { outline: "none" },
                 hover: { fill: isDark ? "#334155" : "#cbd5e1", outline: "none" },
@@ -86,7 +91,10 @@ export function ThreatMap({ threats, onSelect }: ThreatMapProps) {
         <Marker key={threat.id} coordinates={[threat.lon, threat.lat]}>
           <g 
             className="cursor-pointer group pointer-events-auto"
-            onClick={() => onSelect?.(threat)}
+            onClick={(e) => {
+                e.stopPropagation();
+                onSelect?.(threat);
+            }}
           >
             <circle
               className="animate-pulse"
@@ -120,6 +128,7 @@ export function ThreatMap({ threats, onSelect }: ThreatMapProps) {
     <div 
         className="relative w-full h-full overflow-hidden transition-all duration-500"
         style={{ backgroundColor: colors.bg }}
+        onClick={() => onDeselect?.()}
     >
       <div className="absolute top-6 left-6 z-10 flex items-center gap-3 bg-white/10 dark:bg-black/20 backdrop-blur-md px-4 py-2 rounded-lg border border-white/10 shadow-sm">
          <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
