@@ -9,25 +9,11 @@ interface ActivityData {
     alerts: number;
 }
 
-export function ActivityChart() {
-    const [data, setData] = useState<ActivityData[]>([]);
+interface ActivityChartProps {
+    data?: ActivityData[];
+}
 
-    useEffect(() => {
-        // Generate sample data for the last 24 hours
-        const now = new Date();
-        const sampleData: ActivityData[] = [];
-
-        for (let i = 23; i >= 0; i--) {
-            const time = new Date(now.getTime() - i * 60 * 60 * 1000);
-            sampleData.push({
-                time: time.getHours() + ':00',
-                events: Math.floor(Math.random() * 100) + 20,
-                alerts: Math.floor(Math.random() * 20) + 1,
-            });
-        }
-
-        setData(sampleData);
-    }, []);
+export function ActivityChart({ data = [] }: ActivityChartProps) {
 
     return (
         <ResponsiveContainer width="100%" height={200}>

@@ -43,6 +43,7 @@ interface DashboardStats {
         medium: number;
         low: number;
     };
+    activitySeries?: any[];
 }
 
 interface AlertData {
@@ -71,6 +72,7 @@ export default function DashboardPage() {
             medium: 0,
             low: 0,
         },
+        activitySeries: []
     });
 
     // Fetch initial stats
@@ -206,29 +208,29 @@ export default function DashboardPage() {
 
             {/* Main Overview Section */}
             <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
-                <Card className="col-span-1 lg:col-span-4 bg-card/50 backdrop-blur-sm overflow-hidden flex flex-col">
+                <Card className="col-span-1 lg:col-span-4 bg-card/50 backdrop-blur-sm overflow-hidden h-fit mb-4 lg:mb-0">
                     <CardHeader className="py-4">
                         <CardTitle className="text-md flex items-center gap-2">
-                             <Activity className="h-4 w-4 text-blue-500" /> Network Volume (24h)
+                            <Activity className="h-4 w-4 text-blue-500" /> Network Volume (24h)
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="p-0 flex-1 min-h-[350px]">
-                        <ActivityChart />
+                    <CardContent className="p-0 pb-2">
+                        <ActivityChart data={stats.activitySeries} />
                     </CardContent>
                 </Card>
-                <div className="col-span-1 lg:col-span-3 w-full h-full min-h-[350px]">
+                <div className="col-span-1 lg:col-span-3 w-full h-[350px] md:h-[350px]">
                     <LiveEventFeed />
                 </div>
             </div>
 
             <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-7">
                 <div className="col-span-1 lg:col-span-2">
-                   <SeverityChart data={stats.severityDistribution} />
+                    <SeverityChart data={stats.severityDistribution} />
                 </div>
                 <Card className="col-span-1 lg:col-span-5 bg-card/50 backdrop-blur-sm">
                     <CardHeader>
                         <CardTitle className="text-md flex items-center gap-2">
-                             <AlertTriangle className="h-4 w-4 text-orange-500" /> Latest High-Priority Alerts
+                            <AlertTriangle className="h-4 w-4 text-orange-500" /> Latest High-Priority Alerts
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="overflow-x-auto">

@@ -61,6 +61,48 @@ export class DashboardService {
             }
         });
 
+        const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+        // Aggregate events by hour for the last 24 hours
+        const eventActivity = await this.eventModel.aggregate([
+            { $match: { timestamp: { $gte: twentyFourHoursAgo } } },
+            {
+                $group: {
+                    _id: { $hour: "$timestamp" },
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        // Aggregate alerts by hour for the last 24 hours
+        const alertActivity = await this.alertModel.aggregate([
+            { $match: { createdAt: { $gte: twentyFourHoursAgo } } },
+            {
+                $group: {
+                    _id: { $hour: "$createdAt" },
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        // Map into an hourly series 
+        const activitySeries: Array<{time: string, events: number, alerts: number}> = [];
+        for (let i = 23; i >= 0; i--) {
+            const time = new Date(now.getTime() - i * 60 * 60 * 1000);
+            const labelHour = time.getHours();
+            const mongoUtcHour = time.getUTCHours();
+            
+            // MongoDB $hour operator returns the UTC hour
+            const events = eventActivity.find(e => e._id === mongoUtcHour)?.count || 0;
+            const alerts = alertActivity.find(a => a._id === mongoUtcHour)?.count || 0;
+            
+            activitySeries.push({
+                time: `${labelHour.toString().padStart(2, '0')}:00`,
+                events,
+                alerts
+            });
+        }
+
         return {
             totalAlerts,
             activeEvents: totalEvents,
@@ -69,6 +111,7 @@ export class DashboardService {
             alertsChange: recentAlerts,
             eventsChange: recentEvents,
             severityDistribution: distribution,
+            activitySeries,
         };
     }
 }
