@@ -82,6 +82,7 @@ export default function DashboardPage() {
             const response = await api.get('/dashboard/stats');
             return response.data as DashboardStats;
         },
+        refetchInterval: 15000, // Auto-refresh every 15s
     });
 
     // Fetch latest alerts for the map
@@ -91,6 +92,7 @@ export default function DashboardPage() {
             const response = await api.get('/alerts?limit=50');
             return response.data as AlertData[];
         },
+        refetchInterval: 15000, // Auto-refresh every 15s
     });
 
     useEffect(() => {
