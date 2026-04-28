@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query } from '@nestjs/common';
 import { RulesService } from './rules.service';
 import { DetectionRule } from './schemas/rule.schema';
 
@@ -19,6 +19,14 @@ export class RulesController {
     @Get(':id')
     async findOne(@Param('id') id: string) {
         return this.rulesService.findById(id);
+    }
+
+    @Post(':id/dry-run')
+    async dryRun(
+        @Param('id') id: string,
+        @Query('hoursBack') hoursBack?: string,
+    ) {
+        return this.rulesService.dryRun(id, hoursBack ? parseInt(hoursBack) : 24);
     }
 
     @Patch(':id')

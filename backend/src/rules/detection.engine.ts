@@ -101,7 +101,7 @@ export class DetectionEngine {
      * Supports both the new format {type:'group', operator:'AND', conditions:[...]}
      * and the old legacy flat format {field, operator, value}
      */
-    private evaluateConditionTree(conditions: any, event: SecurityEvent): boolean {
+    public evaluateConditionTree(conditions: any, event: SecurityEvent): boolean {
         if (!conditions) return false;
 
         // Handle array (legacy flat format or root group array)

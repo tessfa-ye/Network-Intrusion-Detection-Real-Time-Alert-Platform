@@ -8,11 +8,13 @@ import { EventsModule } from '../events/events.module';
 import { AlertsModule } from '../alerts/alerts.module';
 import { AnalysisModule } from '../analysis/analysis.module';
 import { FirewallModule } from '../firewall/firewall.module';
+import { SecurityEvent, SecurityEventSchema } from '../events/schemas/event.schema';
 
 @Module({
     imports: [
         MongooseModule.forFeature([
             { name: DetectionRule.name, schema: DetectionRuleSchema },
+            { name: SecurityEvent.name, schema: SecurityEventSchema },
         ]),
         EventsModule,
         AlertsModule,
