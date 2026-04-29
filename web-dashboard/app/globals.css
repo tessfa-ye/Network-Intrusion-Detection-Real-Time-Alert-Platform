@@ -150,11 +150,13 @@
   }
 }
 
-/* Force hide Next.js Dev Indicators (The "N" icon) */
+/* Force hide Next.js Dev Indicators, Toasts, and Portals */
 nextjs-portal,
 #nextjs-static-indicator-container,
 [data-nextjs-toast],
-[data-nextjs-static-indicator] {
+[data-nextjs-static-indicator],
+[data-nextjs-toast-wrapper],
+#next-static-indicator-container {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;

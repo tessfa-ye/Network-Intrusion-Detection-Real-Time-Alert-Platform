@@ -168,4 +168,25 @@ export class AlertsService {
             pending,
         };
     }
+
+    async exportCsv(filters: any = {}): Promise<string> {
+        const alerts = await this.alertModel
+            .find(filters)
+            .populate('assignedTo', 'firstName lastName')
+            .sort({ createdAt: -1 })
+            .exec();
+
+        const headers = ['ID', 'Rule Name', 'Severity', 'Status', 'Summary', 'Assigned To', 'Created At'];
+        const rows = alerts.map(a => [
+            a._id.toString(),
+            a.ruleName,
+            a.severity,
+            a.status,
+            `"${a.summary.replace(/"/g, '""')}"`,
+            a.assignedTo ? `${(a.assignedTo as any).firstName} ${(a.assignedTo as any).lastName}` : 'Unassigned',
+            (a as any).createdAt.toISOString(),
+        ]);
+
+        return [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    }
 }

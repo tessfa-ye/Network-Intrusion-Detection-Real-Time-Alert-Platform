@@ -27,6 +27,18 @@ export class AlertsController {
         return this.alertsService.getStats();
     }
 
+    @Get('export')
+    async export(
+        @Query('status') status?: string,
+        @Query('severity') severity?: string,
+    ) {
+        const filters: any = {};
+        if (status) filters.status = status;
+        if (severity) filters.severity = severity;
+        
+        return this.alertsService.exportCsv(filters);
+    }
+
     @Get(':id')
     async findOne(@Param('id') id: string) {
         return this.alertsService.findById(id);

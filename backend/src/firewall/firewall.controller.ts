@@ -19,10 +19,20 @@ export class FirewallController {
         return this.firewallService.blockIp(data.ip, data.reason, data.severity);
     }
 
-    @Delete('unblock/:ip')
+    @Delete('unblock/*ip')
     async unblockIp(@Param('ip') ip: string) {
         console.log(`🔓 Received unblock request for IP: ${ip}`);
         return this.firewallService.unblockIp(ip);
+    }
+
+    @Get('allowlist')
+    async getAllowlist() {
+        return this.firewallService.getAllowlist();
+    }
+
+    @Delete('allowlist/*ip')
+    async removeFromAllowlist(@Param('ip') ip: string) {
+        return this.firewallService.removeFromAllowlist(ip);
     }
 
     @Get('status/:ip')

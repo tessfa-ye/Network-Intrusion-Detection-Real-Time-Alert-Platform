@@ -11,6 +11,7 @@ import { WebsocketModule } from './websocket/websocket.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { AnalysisModule } from './analysis/analysis.module';
 import { FirewallModule } from './firewall/firewall.module';
+import { IntelligenceModule } from './intelligence/intelligence.module';
 
 @Module({
     imports: [
@@ -35,6 +36,7 @@ import { FirewallModule } from './firewall/firewall.module';
         WebsocketModule,
         AnalysisModule,
         FirewallModule,
+        IntelligenceModule,
     ],
 })
 // Force re-compilation
