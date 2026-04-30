@@ -180,7 +180,7 @@ export default function UsersPage() {
                                     </TableRow>
                                 ) : (
                                     filteredUsers.map((user) => (
-                                        <TableRow key={user._id}>
+                                        <TableRow key={user.id}>
                                             <TableCell className="font-medium">
                                                 {user.firstName} {user.lastName}
                                             </TableCell>
@@ -202,7 +202,7 @@ export default function UsersPage() {
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex justify-end gap-2">
-                                                    <Dialog open={editingUser?._id === user._id} onOpenChange={(open) => !open && setEditingUser(null)}>
+                                                    <Dialog open={editingUser?.id === user.id} onOpenChange={(open) => !open && setEditingUser(null)}>
                                                         <DialogTrigger asChild>
                                                             <Button variant="ghost" size="sm" onClick={() => setEditingUser(user)}>
                                                                 <Edit className="h-4 w-4" />
@@ -251,7 +251,7 @@ export default function UsersPage() {
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
-                            onClick={() => deletingUser && deleteMutation.mutate(deletingUser._id)}
+                            onClick={() => deletingUser && deleteMutation.mutate(deletingUser.id)}
                             className="bg-red-500 hover:bg-red-600"
                         >
                             Delete

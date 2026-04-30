@@ -104,7 +104,7 @@ export default function RulesPage() {
 
     const handleDelete = () => {
         if (deletingRule) {
-            deleteMutation.mutate(deletingRule._id);
+            deleteMutation.mutate(deletingRule.id);
         }
     };
 
@@ -173,7 +173,7 @@ export default function RulesPage() {
                                     </TableRow>
                                 ) : (
                                     rules.map((rule) => (
-                                        <TableRow key={rule._id}>
+                                        <TableRow key={rule.id}>
                                             <TableCell className="font-medium">
                                                 <div>{rule.name}</div>
                                                 <div className="text-[10px] text-muted-foreground truncate max-w-[200px]">{rule.description}</div>

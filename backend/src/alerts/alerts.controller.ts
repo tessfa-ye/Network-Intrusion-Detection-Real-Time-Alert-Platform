@@ -110,7 +110,6 @@ export class AlertsController {
             status: 'pending',
             summary: body?.summary || '🧪 This alert was created via API and should appear instantly via WebSocket!',
             affectedAssets: ['test-server-realtime'],
-            investigationNotes: [],
         };
 
         return this.alertsService.create(testAlert as any);

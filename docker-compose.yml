@@ -1,17 +1,17 @@
 services:
-  # MongoDB Database
-  mongodb:
-    image: mongo:7-jammy
-    container_name: nidas-mongodb
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: nidas-postgres
     restart: always
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-changeme123}
-      MONGO_INITDB_DATABASE: nidas
-    volumes:
-      - mongodb_data:/data/db
+      POSTGRES_USER: nidas_admin
+      POSTGRES_PASSWORD: nidas_password123
+      POSTGRES_DB: nidas_db
     ports:
-      - "27017:27017"
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - nidas-network
 
@@ -27,11 +27,11 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3001
-      - MONGODB_URI=mongodb://admin:${MONGO_PASSWORD:-changeme123}@mongodb:27017/nidas?authSource=admin
+      - DATABASE_URL=postgresql://nidas_admin:nidas_password123@postgres:5432/nidas_db?schema=public
       - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-this}
       - JWT_EXPIRES_IN=7d
     depends_on:
-      - mongodb
+      - postgres
     networks:
       - nidas-network
     healthcheck:
@@ -51,8 +51,8 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=http://localhost:3001/api
-      - NEXT_PUBLIC_SOCKET_URL=http://localhost:3001
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3001/api}
+      - NEXT_PUBLIC_SOCKET_URL=${NEXT_PUBLIC_SOCKET_URL:-http://localhost:3001}
     depends_on:
       - backend
     networks:
@@ -63,4 +63,4 @@ networks:
     driver: bridge
 
 volumes:
-  mongodb_data:
+  postgres_data:

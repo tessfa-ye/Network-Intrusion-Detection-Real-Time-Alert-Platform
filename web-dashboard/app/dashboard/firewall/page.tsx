@@ -317,7 +317,7 @@ export default function FirewallPage() {
                                     </TableRow>
                                 ) : (
                                     filteredList.map((item) => (
-                                        <TableRow key={item._id} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors group">
+                                        <TableRow key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors group">
                                             <TableCell className="font-mono font-bold text-blue-500 flex items-center gap-2">
                                                 {item.ip}
                                                 <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 cursor-pointer" />

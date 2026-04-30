@@ -49,10 +49,11 @@ export default function LoginPage() {
         setIsLoading(true);
         try {
             const response = await api.post('/auth/login', values);
-            const { user, accessToken } = response.data;
+            const { user, accessToken, refreshToken } = response.data;
 
             login(user, accessToken);
             localStorage.setItem('accessToken', accessToken);
+            localStorage.setItem('refreshToken', refreshToken);
             localStorage.setItem('user', JSON.stringify(user));
 
             toast.success('Login successful');

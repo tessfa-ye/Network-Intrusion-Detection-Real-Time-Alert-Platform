@@ -1,46 +1,59 @@
-import { Injectable, Inject, forwardRef } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import { Alert, AlertDocument } from './schemas/alert.schema';
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma.service';
+import { Alert } from '@prisma/client';
 import { AlertsGateway } from '../websocket/alerts.gateway';
 
 @Injectable()
 export class AlertsService {
     constructor(
-        @InjectModel(Alert.name)
-        private alertModel: Model<AlertDocument>,
+        private prisma: PrismaService,
         private alertsGateway: AlertsGateway,
     ) { }
 
-    async create(alertData: Partial<Alert>): Promise<Alert> {
-        const alert = new this.alertModel(alertData);
-        const savedAlert = await alert.save();
+    async create(alertData: any): Promise<Alert> {
+        const { eventIds, ...data } = alertData;
+        const savedAlert = await this.prisma.alert.create({
+            data: {
+                ...data,
+                events: {
+                    connect: eventIds?.map((id: string) => ({ id })) || [],
+                },
+            },
+            include: {
+                assignee: { select: { firstName: true, lastName: true, email: true } },
+            },
+        });
 
-        // Emit WebSocket event for real-time updates
         if (this.alertsGateway) {
-            this.alertsGateway.broadcastNewAlert(savedAlert.toObject());
+            this.alertsGateway.broadcastNewAlert(savedAlert);
         }
-        console.log('🔔 New alert created and broadcasted:', savedAlert._id);
+        console.log('🔔 New alert created and broadcasted:', savedAlert.id);
 
         return savedAlert;
     }
 
     async findAll(filters: any = {}, limit: number = 100): Promise<Alert[]> {
-        return this.alertModel
-            .find(filters)
-            .populate('eventIds')
-            .populate('assignedTo', 'firstName lastName email')
-            .sort({ createdAt: -1 })
-            .limit(limit)
-            .exec();
+        return this.prisma.alert.findMany({
+            where: filters,
+            include: {
+                events: true,
+                assignee: { select: { firstName: true, lastName: true, email: true } },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: limit,
+        });
     }
 
     async findById(id: string): Promise<Alert | null> {
-        return this.alertModel
-            .findById(id)
-            .populate('eventIds')
-            .populate('investigationNotes.userId', 'firstName lastName')
-            .exec();
+        return this.prisma.alert.findUnique({
+            where: { id },
+            include: {
+                events: true,
+                investigationNotes: {
+                    include: { user: { select: { firstName: true, lastName: true } } },
+                },
+            },
+        });
     }
 
     async updateStatus(
@@ -48,29 +61,27 @@ export class AlertsService {
         status: string,
         userId?: string,
     ): Promise<Alert | null> {
-        const update: any = { status };
+        const data: any = { status };
         if (userId) {
-            update.assignedTo = new Types.ObjectId(userId);
+            data.assignedTo = userId;
         }
-        return this.alertModel.findByIdAndUpdate(id, update, { new: true }).exec();
+        return this.prisma.alert.update({
+            where: { id },
+            data,
+        });
     }
 
-    async assignAlert(id: string, userId: string): Promise<Alert | null> {
-        let update: any;
-        if (userId && Types.ObjectId.isValid(userId)) {
-            update = { assignedTo: new Types.ObjectId(userId) };
-        } else {
-            update = { $unset: { assignedTo: 1 } };
-        }
-
-        const alert = await this.alertModel.findByIdAndUpdate(
-            id,
-            update,
-            { new: true },
-        ).populate('assignedTo', 'firstName lastName email');
+    async assignAlert(id: string, userId: string | null): Promise<Alert | null> {
+        const alert = await this.prisma.alert.update({
+            where: { id },
+            data: { assignedTo: userId },
+            include: {
+                assignee: { select: { firstName: true, lastName: true, email: true } },
+            },
+        });
 
         if (alert && this.alertsGateway) {
-            this.alertsGateway.broadcastAlertUpdate(alert.toObject());
+            this.alertsGateway.broadcastAlertUpdate(alert);
         }
 
         return alert;
@@ -80,22 +91,14 @@ export class AlertsService {
         id: string,
         userId: string,
         note: string,
-    ): Promise<Alert | null> {
-        return this.alertModel
-            .findByIdAndUpdate(
-                id,
-                {
-                    $push: {
-                        investigationNotes: {
-                            userId: new Types.ObjectId(userId),
-                            timestamp: new Date(),
-                            note,
-                        },
-                    },
-                },
-                { new: true },
-            )
-            .exec();
+    ): Promise<any> {
+        return this.prisma.investigationNote.create({
+            data: {
+                alertId: id,
+                userId,
+                note,
+            },
+        });
     }
 
     async bulkUpdateStatus(
@@ -104,28 +107,23 @@ export class AlertsService {
     ): Promise<{ updated: number }> {
         try {
             console.log(`🔄 Bulk updating ${alertIds.length} alerts to ${status}`);
-            const objectIds = alertIds.map(id => new Types.ObjectId(id));
+            const result = await this.prisma.alert.updateMany({
+                where: { id: { in: alertIds } },
+                data: { status },
+            });
 
-            const result = await this.alertModel.updateMany(
-                { _id: { $in: objectIds } },
-                { status },
-            );
-
-            // Broadcast updates for real-time UI sync
-            if (result.modifiedCount > 0) {
-                try {
-                    const updatedAlerts = await this.alertModel.find({ _id: { $in: objectIds } });
-                    updatedAlerts.forEach(alert => {
-                        if (this.alertsGateway) {
-                            this.alertsGateway.broadcastAlertUpdate(alert.toObject());
-                        }
-                    });
-                } catch (wsError) {
-                    console.error('⚠️ Failed to broadcast bulk updates:', wsError);
-                }
+            if (result.count > 0) {
+                const updatedAlerts = await this.prisma.alert.findMany({
+                    where: { id: { in: alertIds } },
+                });
+                updatedAlerts.forEach(alert => {
+                    if (this.alertsGateway) {
+                        this.alertsGateway.broadcastAlertUpdate(alert);
+                    }
+                });
             }
 
-            return { updated: result.modifiedCount };
+            return { updated: result.count };
         } catch (error) {
             console.error('❌ Bulk update failed:', error);
             throw error;
@@ -135,14 +133,12 @@ export class AlertsService {
     async bulkDelete(alertIds: string[]): Promise<{ deleted: number }> {
         try {
             console.log(`🗑️ Bulk deleting ${alertIds.length} alerts`);
-            const objectIds = alertIds.map(id => new Types.ObjectId(id));
-
-            const result = await this.alertModel.deleteMany({
-                _id: { $in: objectIds },
+            const result = await this.prisma.alert.deleteMany({
+                where: { id: { in: alertIds } },
             });
 
-            console.log(`🗑️ Bulk deleted ${result.deletedCount} alerts`);
-            return { deleted: result.deletedCount };
+            console.log(`🗑️ Bulk deleted ${result.count} alerts`);
+            return { deleted: result.count };
         } catch (error) {
             console.error('❌ Bulk delete failed:', error);
             throw error;
@@ -151,40 +147,44 @@ export class AlertsService {
 
     async getStats(): Promise<any> {
         const [total, byStatus, bySeverity, pending] = await Promise.all([
-            this.alertModel.countDocuments(),
-            this.alertModel.aggregate([
-                { $group: { _id: '$status', count: { $sum: 1 } } },
-            ]),
-            this.alertModel.aggregate([
-                { $group: { _id: '$severity', count: { $sum: 1 } } },
-            ]),
-            this.alertModel.countDocuments({ status: 'pending' }),
+            this.prisma.alert.count(),
+            this.prisma.alert.groupBy({
+                by: ['status'],
+                _count: { status: true },
+            }),
+            this.prisma.alert.groupBy({
+                by: ['severity'],
+                _count: { severity: true },
+            }),
+            this.prisma.alert.count({ where: { status: 'pending' } }),
         ]);
 
         return {
             total,
-            byStatus,
-            bySeverity,
+            byStatus: byStatus.map(s => ({ _id: s.status, count: s._count.status })),
+            bySeverity: bySeverity.map(s => ({ _id: s.severity, count: s._count.severity })),
             pending,
         };
     }
 
     async exportCsv(filters: any = {}): Promise<string> {
-        const alerts = await this.alertModel
-            .find(filters)
-            .populate('assignedTo', 'firstName lastName')
-            .sort({ createdAt: -1 })
-            .exec();
+        const alerts = await this.prisma.alert.findMany({
+            where: filters,
+            include: {
+                assignee: { select: { firstName: true, lastName: true } },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
 
         const headers = ['ID', 'Rule Name', 'Severity', 'Status', 'Summary', 'Assigned To', 'Created At'];
         const rows = alerts.map(a => [
-            a._id.toString(),
+            a.id,
             a.ruleName,
             a.severity,
             a.status,
             `"${a.summary.replace(/"/g, '""')}"`,
-            a.assignedTo ? `${(a.assignedTo as any).firstName} ${(a.assignedTo as any).lastName}` : 'Unassigned',
-            (a as any).createdAt.toISOString(),
+            a.assignee ? `${a.assignee.firstName} ${a.assignee.lastName}` : 'Unassigned',
+            a.createdAt.toISOString(),
         ]);
 
         return [headers.join(','), ...rows.map(r => r.join(','))].join('\n');

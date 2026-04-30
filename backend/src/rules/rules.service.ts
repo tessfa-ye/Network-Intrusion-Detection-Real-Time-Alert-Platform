@@ -1,44 +1,51 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { DetectionRule, DetectionRuleDocument } from './schemas/rule.schema';
-import { SecurityEvent, SecurityEventDocument } from '../events/schemas/event.schema';
+import { PrismaService } from '../prisma.service';
+import { DetectionRule, SecurityEvent } from '@prisma/client';
 
 @Injectable()
 export class RulesService {
     constructor(
-        @InjectModel(DetectionRule.name)
-        private ruleModel: Model<DetectionRuleDocument>,
-        @InjectModel(SecurityEvent.name)
-        private eventModel: Model<SecurityEventDocument>,
+        private prisma: PrismaService,
     ) { }
 
-    async create(ruleData: Partial<DetectionRule>): Promise<DetectionRule> {
-        const rule = new this.ruleModel(ruleData);
-        return rule.save();
+    async create(ruleData: any): Promise<DetectionRule> {
+        return this.prisma.detectionRule.create({
+            data: ruleData,
+        });
     }
 
     async findAll(enabled?: boolean): Promise<DetectionRule[]> {
         const filter = enabled !== undefined ? { enabled } : {};
-        return this.ruleModel.find(filter).exec();
+        return this.prisma.detectionRule.findMany({
+            where: filter,
+        });
     }
 
     async findById(id: string): Promise<DetectionRule | null> {
-        return this.ruleModel.findById(id).exec();
+        return this.prisma.detectionRule.findUnique({
+            where: { id },
+        });
     }
 
     async update(id: string, updateData: Partial<DetectionRule>): Promise<DetectionRule | null> {
         // Don't include createdBy in updates
         const { createdBy, ...dataToUpdate } = updateData as any;
-        return this.ruleModel.findByIdAndUpdate(id, dataToUpdate, { new: true }).exec();
+        return this.prisma.detectionRule.update({
+            where: { id },
+            data: dataToUpdate,
+        });
     }
 
     async delete(id: string): Promise<void> {
-        await this.ruleModel.findByIdAndDelete(id).exec();
+        await this.prisma.detectionRule.delete({
+            where: { id },
+        });
     }
 
     async getEnabledRules(): Promise<DetectionRule[]> {
-        return this.ruleModel.find({ enabled: true }).exec();
+        return this.prisma.detectionRule.findMany({
+            where: { enabled: true },
+        });
     }
 
     async dryRun(ruleId: string, hoursBack = 24): Promise<{
@@ -51,11 +58,13 @@ export class RulesService {
         sampleEvents: any[];
         windowHours: number;
     }> {
-        const rule = await this.ruleModel.findById(ruleId).exec();
+        const rule = await this.prisma.detectionRule.findUnique({ where: { id: ruleId } });
         if (!rule) throw new Error('Rule not found');
 
         const since = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
-        const events = await this.eventModel.find({ timestamp: { $gte: since } }).lean().exec();
+        const events = await this.prisma.securityEvent.findMany({
+            where: { timestamp: { gte: since } },
+        });
 
         // Inline condition evaluation to avoid circular DI with DetectionEngine
         const matched = events.filter(e => this.evaluateConditionTree(rule.conditions, e));

@@ -102,7 +102,7 @@ export default function MapPage() {
     const threatPoints = alerts
         .filter(a => a.location?.lat && a.location?.lon)
         .map(a => ({
-            id: a._id,
+            id: a.id,
             lat: a.location!.lat,
             lon: a.location!.lon,
             severity: a.severity,

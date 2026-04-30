@@ -42,7 +42,7 @@ export function AssignUserSelect({ value, onSelect, disabled }: AssignUserSelect
         },
     });
 
-    const selectedUser = users.find((user) => user._id === value);
+    const selectedUser = users.find((user) => user.id === value);
 
     const filteredUsers = users.filter((user) => {
         const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
@@ -118,10 +118,10 @@ export function AssignUserSelect({ value, onSelect, disabled }: AssignUserSelect
                         const fullName = `${user.firstName} ${user.lastName}`;
                         return (
                             <DropdownMenuItem
-                                key={user._id}
+                                key={user.id}
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    onSelect(user._id);
+                                    onSelect(user.id);
                                     setOpen(false);
                                 }}
                                 className="cursor-pointer"
@@ -129,7 +129,7 @@ export function AssignUserSelect({ value, onSelect, disabled }: AssignUserSelect
                                 <Check
                                     className={cn(
                                         'mr-2 h-4 w-4',
-                                        value === user._id ? 'opacity-100' : 'opacity-0'
+                                        value === user.id ? 'opacity-100' : 'opacity-0'
                                     )}
                                 />
                                 <div className="flex items-center gap-2">

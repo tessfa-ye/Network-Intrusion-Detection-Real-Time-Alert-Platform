@@ -29,7 +29,7 @@ async function simulateBruteForce(ip: string) {
     for (let i = 0; i < 15; i++) {
         await sendEvent({
             timestamp: new Date(),
-            eventType: 'login',
+            eventType: 'login_failed',
             severity: 'medium',
             sourceIP: ip,
             description: `Failed login attempt for user 'admin'`,

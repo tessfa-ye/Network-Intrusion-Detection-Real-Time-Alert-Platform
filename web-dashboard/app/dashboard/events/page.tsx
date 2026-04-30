@@ -185,7 +185,7 @@ export default function EventsPage() {
                                     </TableRow>
                                 ) : (
                                     events.map((event) => (
-                                        <TableRow key={event._id}>
+                                        <TableRow key={event.id}>
                                             <TableCell className="font-medium capitalize">{event.eventType}</TableCell>
                                             <TableCell>
                                                 <Badge className={severityColors[event.severity]}>

@@ -88,7 +88,7 @@ export default function AlertsPage() {
             socket.on('alert:updated', (updatedAlert: Alert) => {
 
                 setAlerts((prev: Alert[]) =>
-                    prev.map((a) => (a._id === updatedAlert._id ? updatedAlert : a))
+                    prev.map((a) => (a.id === updatedAlert.id ? updatedAlert : a))
                 );
             });
 
@@ -127,7 +127,7 @@ export default function AlertsPage() {
 
     const handleSelectAll = (checked: boolean) => {
         if (checked) {
-            setSelectedAlerts(new Set(filteredAlerts.map(a => a._id)));
+            setSelectedAlerts(new Set(filteredAlerts.map(a => a.id)));
         } else {
             setSelectedAlerts(new Set());
         }
@@ -292,19 +292,19 @@ export default function AlertsPage() {
                                 ) : (
                                     filteredAlerts.map((alert) => (
                                         <TableRow
-                                            key={alert._id}
+                                            key={alert.id}
                                             className="cursor-pointer hover:bg-muted/50"
                                             onClick={(e) => {
                                                 // Don't navigate if clicking checkbox or assignment
                                                 if ((e.target as HTMLElement).closest('[role="checkbox"]') ||
                                                     (e.target as HTMLElement).closest('[role="combobox"]')) return;
-                                                router.push(`/dashboard/alerts/${alert._id}`);
+                                                router.push(`/dashboard/alerts/${alert.id}`);
                                             }}
                                         >
                                             <TableCell>
                                                 <Checkbox
-                                                    checked={selectedAlerts.has(alert._id)}
-                                                    onCheckedChange={(checked) => handleSelectAlert(alert._id, checked as boolean)}
+                                                    checked={selectedAlerts.has(alert.id)}
+                                                    onCheckedChange={(checked) => handleSelectAlert(alert.id, checked as boolean)}
                                                 />
                                             </TableCell>
                                             <TableCell className="font-medium">{alert.ruleName}</TableCell>
@@ -321,10 +321,10 @@ export default function AlertsPage() {
                                             <TableCell>
                                                 <div onClick={(e) => e.stopPropagation()}>
                                                     <AssignUserSelect
-                                                        value={(alert.assignedTo as any)?._id || (typeof alert.assignedTo === 'string' ? alert.assignedTo : undefined)}
+                                                        value={(alert.assignedTo as any)?.id || (typeof alert.assignedTo === 'string' ? alert.assignedTo : undefined)}
                                                         onSelect={async (userId) => {
                                                             try {
-                                                                await api.patch(`/alerts/${alert._id}/assign`, { userId });
+                                                                await api.patch(`/alerts/${alert.id}/assign`, { userId });
                                                                 toast.success('Alert assigned successfully');
                                                                 // Optimistic update or refetch
                                                                 refetch();

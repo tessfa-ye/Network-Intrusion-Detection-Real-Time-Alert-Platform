@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                      String    @id @default(uuid())
+  email                   String    @unique
+  passwordHash            String?
+  role                    String    @default("security_officer")
+  firstName               String
+  lastName                String
+  phone                   String?
+  authProvider            String    @default("local")
+  providerId              String?
+  notificationPreferences Json      @default("{\"email\": true, \"sms\": false, \"push\": true, \"minSeverity\": \"medium\"}")
+  active                  Boolean   @default(true)
+  lastLogin               DateTime?
+  refreshToken            String?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  assignedAlerts          Alert[]   @relation("AssignedTo")
+  createdRules            DetectionRule[]
+  investigations          InvestigationNote[]
+
+  @@index([email])
+  @@index([role, active])
+}
+
+model SecurityEvent {
+  id            String   @id @default(uuid())
+  timestamp     DateTime @default(now())
+  eventType     String
+  severity      String
+  sourceIP      String
+  targetIP      String?
+  userId        String?
+  deviceId      String?
+  location      Json?
+  description   String
+  metadata      Json     @default("{}")
+  status        String   @default("Pending")
+  anomalyScore  Float?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  alerts        Alert[]  @relation("EventToAlert")
+
+  @@index([sourceIP])
+  @@index([targetIP])
+  @@index([userId])
+  @@index([timestamp])
+  @@index([eventType, severity])
+}
+
+model Alert {
+  id                 String              @id @default(uuid())
+  ruleId             String
+  ruleName           String
+  severity           String
+  status             String              @default("pending")
+  assignedTo         String?
+  summary            String
+  affectedAssets     String[]
+  location           Json?
+  anomalyScore       Float?              @default(0)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  rule               DetectionRule       @relation(fields: [ruleId], references: [id])
+  assignee           User?               @relation("AssignedTo", fields: [assignedTo], references: [id])
+  events             SecurityEvent[]     @relation("EventToAlert")
+  investigationNotes InvestigationNote[]
+
+  @@index([status, severity])
+  @@index([createdAt])
+  @@index([assignedTo])
+}
+
+model InvestigationNote {
+  id        String   @id @default(uuid())
+  alertId   String
+  userId    String
+  timestamp DateTime @default(now())
+  note      String
+
+  alert     Alert    @relation(fields: [alertId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model DetectionRule {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  enabled     Boolean  @default(true)
+  autoBlock   Boolean  @default(false)
+  severity    String   @default("medium")
+  conditions  Json     @default("[]")
+  actions     Json     @default("[{\"type\": \"alert\", \"config\": {}}]")
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  creator     User     @relation(fields: [createdBy], references: [id])
+  alerts      Alert[]
+
+  @@index([enabled])
+  @@index([severity])
+}
+
+model Blacklist {
+  id          String   @id @default(uuid())
+  ip          String   @unique
+  reason      String
+  severity    String?
+  isActive    Boolean  @default(true)
+  addedBy     String?
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([ip])
+}
+
+model Allowlist {
+  id               String   @id @default(uuid())
+  ip               String   @unique
+  reason           String
+  originalReason   String?
+  originalSeverity String?
+  addedBy          String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([ip])
+}
+
+model IPBaseline {
+  id             String   @id @default(uuid())
+  sourceIP       String
+  eventType      String
+  avgFrequency   Float    @default(0)
+  stdDev         Float    @default(0)
+  sampleCount    Int      @default(0)
+  lastCalculated DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([sourceIP, eventType])
+  @@index([sourceIP])
+}

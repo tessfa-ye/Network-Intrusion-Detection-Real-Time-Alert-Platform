@@ -26,12 +26,12 @@ export class AuthService {
             throw new UnauthorizedException('Account is disabled');
         }
 
-        await this.usersService.updateLastLogin((user as any)._id.toString());
+        await this.usersService.updateLastLogin(user.id);
         return user;
     }
 
     async login(user: any) {
-        const userId = (user as any)._id?.toString() || user.id;
+        const userId = user.id;
         const payload = {
             email: user.email,
             sub: userId,

@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { MongooseModule } from '@nestjs/mongoose';
+import { PrismaModule } from './prisma.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { EventsModule } from './events/events.module';
 import { AlertsModule } from './alerts/alerts.module';
@@ -19,13 +19,7 @@ import { IntelligenceModule } from './intelligence/intelligence.module';
             isGlobal: true,
             envFilePath: ['.env', '.env.backend'],
         }),
-        MongooseModule.forRootAsync({
-            imports: [ConfigModule],
-            useFactory: async (configService: ConfigService) => ({
-                uri: configService.get<string>('MONGODB_URI'),
-            }),
-            inject: [ConfigService],
-        }),
+        PrismaModule,
         ScheduleModule.forRoot(),
         AuthModule,
         UsersModule,

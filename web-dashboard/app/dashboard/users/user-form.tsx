@@ -93,7 +93,7 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
             }
 
             if (isEditing) {
-                await api.patch(`/users/${user._id}`, data);
+                await api.patch(`/users/${user.id}`, data);
             } else {
                 await api.post('/users', data);
             }

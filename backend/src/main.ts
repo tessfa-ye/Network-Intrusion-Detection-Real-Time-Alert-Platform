@@ -30,7 +30,7 @@ async function bootstrap() {
 
     console.log(`\n🚀 NIDAS Backend running on: http://localhost:${port}/api`);
     console.log(`📊 Environment: ${configService.get('NODE_ENV')}`);
-    console.log(`🗄️  MongoDB: ${configService.get('MONGODB_URI')?.split('@')[1] || 'Connected'}\n`);
+    console.log(`🗄️  PostgreSQL: Connected\n`);
 }
 
 bootstrap();

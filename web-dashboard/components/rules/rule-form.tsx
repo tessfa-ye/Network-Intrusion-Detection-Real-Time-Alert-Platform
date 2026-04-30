@@ -51,8 +51,8 @@ export function RuleForm({ rule, onSuccess }: RuleFormProps) {
         if (rule?.conditions && Array.isArray(rule.conditions) && rule.conditions.length > 0) {
             const firstCond = rule.conditions[0];
             // If it's already a group (new format), use it directly
-            if (firstCond && typeof firstCond === 'object' && firstCond.type === 'group') {
-                return firstCond as RuleConditionGroup;
+            if (firstCond && typeof firstCond === 'object' && (firstCond as any).type === 'group') {
+                return firstCond as any as RuleConditionGroup;
             }
             return convertLegacyConditions(rule.conditions);
         }
@@ -73,11 +73,11 @@ export function RuleForm({ rule, onSuccess }: RuleFormProps) {
     } | null>(null);
 
     async function handleDryRun() {
-        if (!rule?._id) return;
+        if (!rule?.id) return;
         setDryRunLoading(true);
         setDryRunResult(null);
         try {
-            const res = await api.post(`/rules/${rule._id}/dry-run`);
+            const res = await api.post(`/rules/${rule.id}/dry-run`);
             setDryRunResult(res.data);
         } catch {
             toast.error('Dry run failed — check the backend logs.');
@@ -108,8 +108,8 @@ export function RuleForm({ rule, onSuccess }: RuleFormProps) {
             });
             if (rule.conditions && Array.isArray(rule.conditions) && rule.conditions.length > 0) {
                 const firstCond = rule.conditions[0];
-                if (firstCond && typeof firstCond === 'object' && firstCond.type === 'group') {
-                    setConditions(firstCond as RuleConditionGroup);
+                if (firstCond && typeof firstCond === 'object' && (firstCond as any).type === 'group') {
+                    setConditions(firstCond as any as RuleConditionGroup);
                 } else {
                     setConditions(convertLegacyConditions(rule.conditions));
                 }
@@ -127,7 +127,7 @@ export function RuleForm({ rule, onSuccess }: RuleFormProps) {
             });
             setConditions(emptyGroup());
         }
-    }, [rule?._id, rule?.name, rule?.description, rule?.severity, rule?.enabled, form]);
+    }, [rule?.id, rule?.name, rule?.description, rule?.severity, rule?.enabled, form]);
 
     const mutation = useMutation({
         mutationFn: async (values: FormValues) => {
@@ -153,7 +153,7 @@ export function RuleForm({ rule, onSuccess }: RuleFormProps) {
             }
 
             if (isEditing) {
-                await api.patch(`/rules/${rule._id}`, data);
+                await api.patch(`/rules/${rule.id}`, data);
             } else {
                 await api.post('/rules', data);
             }

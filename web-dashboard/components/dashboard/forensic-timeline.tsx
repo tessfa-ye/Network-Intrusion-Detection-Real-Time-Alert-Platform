@@ -56,7 +56,7 @@ export function ForensicTimeline({ sourceIP }: ForensicTimelineProps) {
             <ScrollArea className="flex-1 pr-4 min-h-0">
                 <div className="relative ml-2 border-l border-slate-200 dark:border-slate-800 space-y-3 pb-2">
                     {events.map((event, idx) => (
-                        <div key={event._id} className="relative pl-6 animate-in fade-in slide-in-from-left-2 duration-300" style={{ animationDelay: `${idx * 50}ms` }}>
+                        <div key={event.id} className="relative pl-6 animate-in fade-in slide-in-from-left-2 duration-300" style={{ animationDelay: `${idx * 50}ms` }}>
                             {/* Timeline Node */}
                             <div className={`absolute -left-[5px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-[#0b1120] ${event.severity === 'critical' ? 'bg-red-500' :
                                 event.severity === 'high' ? 'bg-orange-500' :

@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Patch, Delete, Body, Param, Query } from '@nestjs/common';
 import { RulesService } from './rules.service';
-import { DetectionRule } from './schemas/rule.schema';
+import { DetectionRule } from '@prisma/client';
 
 @Controller('rules')
 export class RulesController {
