@@ -24,7 +24,7 @@ COPY . .
 RUN npm run build
 
 # Verify the build output exists
-RUN ls -la dist/ && ls -la dist/main.js
+RUN ls -la dist/ && ls -la dist/src/main.js
 
 # Production stage
 FROM node:22-alpine
@@ -43,4 +43,4 @@ COPY --from=builder /app/prisma.config.ts ./
 EXPOSE 10000
 
 # Start: 1. Run DB migrations 2. Start NestJS
-CMD ["/bin/sh", "-c", "npx prisma migrate deploy && node dist/main"]
+CMD ["/bin/sh", "-c", "npx prisma migrate deploy && node dist/src/main"]
