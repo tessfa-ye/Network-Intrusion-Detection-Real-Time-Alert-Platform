@@ -3,11 +3,15 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
+# Copy package files AND the prisma folder
 COPY package*.json ./
+COPY prisma ./prisma/ 
 
-# Install dependencies
+# Install dependencies including Prisma
 RUN npm ci --legacy-peer-deps
+
+# Generate the Prisma Client (Crucial Step)
+RUN npx prisma generate
 
 # Copy source code
 COPY . .
@@ -23,14 +27,15 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install only production dependencies
-RUN npm ci --only=production --legacy-peer-deps
+# Copy node_modules from builder (includes the generated Prisma Client)
+COPY --from=builder /app/node_modules ./node_modules
 
-# Copy built application from builder
+# Copy built application and prisma folder from builder
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/prisma ./prisma
 
-# Expose port
-EXPOSE 3001
+# Render default port is 10000
+EXPOSE 10000
 
-# Start the application
-CMD ["node", "dist/main"]
+# Start: 1. Sync DB schema 2. Start NestJS
+CMD npx prisma migrate deploy && node dist/main
