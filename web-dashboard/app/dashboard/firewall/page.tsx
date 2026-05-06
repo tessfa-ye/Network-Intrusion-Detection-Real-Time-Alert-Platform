@@ -42,7 +42,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface BlacklistItem {
-    _id: string;
+    id: string;
     ip: string;
     reason: string;
     severity: string;

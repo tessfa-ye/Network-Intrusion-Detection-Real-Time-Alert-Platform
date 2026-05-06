@@ -29,7 +29,7 @@ const ThreatMap = dynamic(() => import('@/components/dashboard/threat-map').then
 });
 
 interface AlertData {
-    _id: string;
+    id: string;
     severity: string;
     summary: string;
     ruleName: string;

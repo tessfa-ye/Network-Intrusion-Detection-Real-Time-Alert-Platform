@@ -47,7 +47,7 @@ interface DashboardStats {
 }
 
 interface AlertData {
-    _id: string;
+    id: string;
     severity: string;
     location?: {
         lat: number;

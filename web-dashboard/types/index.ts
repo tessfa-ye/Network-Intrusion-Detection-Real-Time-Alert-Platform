@@ -1,5 +1,5 @@
 export interface User {
-  _id: string;
+  id: string;
   email: string;
   firstName: string;
   lastName: string;
@@ -15,7 +15,7 @@ export interface User {
 }
 
 export interface SecurityEvent {
-  _id: string;
+  id: string;
   timestamp: string;
   eventType: 'login' | 'api_access' | 'firewall' | 'file_access' | 'network' | 'malware';
   severity: 'low' | 'medium' | 'high' | 'critical';
@@ -27,7 +27,7 @@ export interface SecurityEvent {
 }
 
 export interface Alert {
-  _id: string;
+  id: string;
   eventIds: string[];
   ruleId: string;
   ruleName: string;
@@ -42,6 +42,7 @@ export interface Alert {
 }
 
 export interface InvestigationNote {
+  id: string;
   userId: string;
   timestamp: string;
   note: string;
@@ -49,7 +50,7 @@ export interface InvestigationNote {
 }
 
 export interface DetectionRule {
-  _id: string;
+  id: string;
   name: string;
   description: string;
   enabled: boolean;
