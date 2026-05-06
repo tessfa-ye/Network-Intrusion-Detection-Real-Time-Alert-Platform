@@ -24,7 +24,7 @@ interface AssignUserSelectProps {
 }
 
 interface User {
-    _id: string;
+    id: string;
     firstName: string;
     lastName: string;
     email: string;

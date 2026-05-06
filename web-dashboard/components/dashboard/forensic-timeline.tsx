@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface ForensicEvent {
-    _id: string;
+    id: string;
     eventType: string;
     severity: string;
     summary: string;
