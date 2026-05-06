@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { getSocket } from '@/lib/socket';
-import { Alert } from '@/types';
+import { NidasAlert } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -41,7 +41,7 @@ const statusColors = {
 
 export default function AlertsPage() {
     const router = useRouter();
-    const [alerts, setAlerts] = useState<Alert[]>([]);
+    const [alerts, setAlerts] = useState<NidasAlert[]>([]);
     const [selectedSeverity, setSelectedSeverity] = useState<string>('all');
     const [selectedStatus, setSelectedStatus] = useState<string>('all');
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -79,15 +79,15 @@ export default function AlertsPage() {
 
             socket.emit('subscribe:alerts');
 
-            socket.on('alert:new', (newAlert: Alert) => {
+            socket.on('alert:new', (newAlert: NidasAlert) => {
 
-                setAlerts((prev: Alert[]) => [newAlert, ...prev]);
+                setAlerts((prev: NidasAlert[]) => [newAlert, ...prev]);
                 toast.info(`New ${newAlert.severity.toUpperCase()} alert: ${newAlert.ruleName}`);
             });
 
-            socket.on('alert:updated', (updatedAlert: Alert) => {
+            socket.on('alert:updated', (updatedAlert: NidasAlert) => {
 
-                setAlerts((prev: Alert[]) =>
+                setAlerts((prev: NidasAlert[]) =>
                     prev.map((a) => (a.id === updatedAlert.id ? updatedAlert : a)) // Use updated 'id' field
                 );
             });

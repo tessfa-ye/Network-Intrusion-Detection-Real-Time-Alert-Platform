@@ -26,7 +26,7 @@ export interface SecurityEvent {
   processed: boolean;
 }
 
-export interface Alert {
+export interface NidasAlert {
   id: string;
   eventIds: string[];
   ruleId: string;

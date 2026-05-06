@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { Alert } from '@/types';
+import { NidasAlert } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -41,7 +41,7 @@ export default function AlertDetailPage() {
         queryKey: ['alert', alertId],
         queryFn: async () => {
             const response = await api.get(`/alerts/${alertId}`);
-            return response.data as Alert;
+            return response.data as NidasAlert;
         },
     });
 
