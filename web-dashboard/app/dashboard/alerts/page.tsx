@@ -88,7 +88,7 @@ export default function AlertsPage() {
             socket.on('alert:updated', (updatedAlert: Alert) => {
 
                 setAlerts((prev: Alert[]) =>
-                    prev.map((a) => (a.id === updatedAlert.id ? updatedAlert : a))
+                    prev.map((a) => (a.id === updatedAlert.id ? updatedAlert : a)) // Use updated 'id' field
                 );
             });
 
