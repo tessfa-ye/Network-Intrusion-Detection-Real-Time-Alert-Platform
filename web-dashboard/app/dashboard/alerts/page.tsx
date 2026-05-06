@@ -59,7 +59,7 @@ export default function AlertsPage() {
             if (selectedStatus !== 'all') params.status = selectedStatus;
 
             const response = await api.get('/alerts', { params });
-            return response.data as Alert[];
+            return response.data as NidasAlert[];
         },
     });
 
@@ -114,7 +114,7 @@ export default function AlertsPage() {
         }
 
         const headers = ['Rule Name', 'Severity', 'Status', 'Summary', 'Created'];
-        const keys: (keyof Alert)[] = ['ruleName', 'severity', 'status', 'summary', 'createdAt'];
+        const keys: (keyof NidasAlert)[] = ['ruleName', 'severity', 'status', 'summary', 'createdAt'];
 
         if (format === 'csv') {
             exportToCSV(filteredAlerts, generateFilename('alerts'), headers, keys);

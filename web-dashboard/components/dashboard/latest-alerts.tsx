@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { Alert } from '@/types';
+import { NidasAlert } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface LatestAlert {
@@ -18,7 +18,7 @@ export function LatestAlerts() {
         queryKey: ['latest-alerts'],
         queryFn: async () => {
             const response = await api.get('/alerts?limit=3');
-            return response.data as Alert[];
+            return response.data as NidasAlert[];
         },
     });
 
