@@ -16,9 +16,10 @@ async function bootstrap() {
         }),
     );
 
-    // CORS configuration
+    // CORS configuration - mandatory for cross-domain cookies/auth
+    const corsOrigin = configService.get('CORS_ORIGIN');
     app.enableCors({
-        origin: configService.get('CORS_ORIGIN')?.split(',') || '*',
+        origin: corsOrigin ? corsOrigin.split(',') : true, // 'true' reflects the request origin
         credentials: true,
     });
 
