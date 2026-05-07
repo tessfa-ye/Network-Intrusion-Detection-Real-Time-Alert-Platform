@@ -1,10 +1,10 @@
 # Build stage
-FROM node:22-alpine AS builder
+FROM node:22-slim AS builder
 
 WORKDIR /app
 
 # Install build tools needed for native modules
-RUN apk add --no-cache python3 make g++
+RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 # Copy package files AND the prisma folder
 COPY package*.json ./
@@ -27,7 +27,7 @@ RUN npm run build
 RUN ls -la dist/ && ls -la dist/src/main.js
 
 # Production stage
-FROM node:22-alpine
+FROM node:22-slim
 
 WORKDIR /app
 
