@@ -15,17 +15,27 @@ interface ActivityChartProps {
 
 export function ActivityChart({ data = [] }: ActivityChartProps) {
 
+    const formatTime = (timeStr: string) => {
+        try {
+            const date = new Date(timeStr);
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+        } catch (e) {
+            return timeStr;
+        }
+    };
+
     return (
         <ResponsiveContainer width="100%" height={200}>
             <LineChart data={data}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
                     dataKey="time"
-                    tick={{ fontSize: 12 }}
+                    tick={{ fontSize: 10 }}
                     interval={3}
+                    tickFormatter={formatTime}
                 />
                 <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip />
+                <Tooltip labelFormatter={formatTime} />
                 <Legend />
                 <Line
                     type="monotone"

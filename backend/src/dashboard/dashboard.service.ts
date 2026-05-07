@@ -68,10 +68,13 @@ export class DashboardService {
       events: number;
       alerts: number;
     }> = [];
+    
+    // Create 24 hourly buckets
     for (let i = 23; i >= 0; i--) {
-      const time = new Date(now.getTime() - i * 60 * 60 * 1000);
-      const labelHour = time.getHours();
-      const utcHour = time.getUTCHours();
+      const bucketTime = new Date(now.getTime() - i * 60 * 60 * 1000);
+      bucketTime.setMinutes(0, 0, 0); // Round to the start of the hour
+      
+      const utcHour = bucketTime.getUTCHours();
 
       const events = Number(
         eventActivity.find((e) => Number(e.hour) === utcHour)?.count || 0,
@@ -81,7 +84,7 @@ export class DashboardService {
       );
 
       activitySeries.push({
-        time: `${labelHour.toString().padStart(2, '0')}:00`,
+        time: bucketTime.toISOString(), // Send full ISO string
         events,
         alerts,
       });

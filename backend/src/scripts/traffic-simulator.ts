@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:5000/api';
+const API_URL = process.env.API_URL || 'http://localhost:5000/api';
 
 const EVENT_TYPES = ['login', 'api_access', 'firewall', 'file_access', 'network'];
 const SEVERITIES = ['low', 'medium', 'high', 'critical'];
