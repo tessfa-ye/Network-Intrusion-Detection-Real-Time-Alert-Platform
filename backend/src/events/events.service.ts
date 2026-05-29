@@ -13,8 +13,8 @@ export class EventsService {
         private firewallService: FirewallService,
     ) { }
 
-    async create(eventData: any): Promise<SecurityEvent> {
-        if (this.firewallService.isIpBlocked(eventData.sourceIP)) {
+    async create(tenantId: string, eventData: any): Promise<SecurityEvent> {
+        if (this.firewallService.isIpBlocked(tenantId, eventData.sourceIP)) {
             console.log(`🛑 DROP: Blocked IP ${eventData.sourceIP} tried to send event.`);
             return { ...eventData, status: 'Blocked' } as any; 
         }
@@ -34,6 +34,7 @@ export class EventsService {
         const savedEvent = await this.prisma.securityEvent.create({
             data: {
                 ...eventData,
+                tenantId,
                 location: location || undefined,
                 status: 'Pending',
             },
@@ -46,39 +47,42 @@ export class EventsService {
         return savedEvent;
     }
 
-    async createMany(eventsData: any[]): Promise<any> {
+    async createMany(tenantId: string, eventsData: any[]): Promise<any> {
+        const dataWithTenant = eventsData.map(e => ({ ...e, tenantId }));
         return this.prisma.securityEvent.createMany({
-            data: eventsData,
+            data: dataWithTenant,
         });
     }
 
-    async findAll(filters: any = {}, limit: number = 100): Promise<SecurityEvent[]> {
+    async findAll(tenantId: string, filters: any = {}, limit: number = 100): Promise<SecurityEvent[]> {
         return this.prisma.securityEvent.findMany({
-            where: filters,
+            where: { ...filters, tenantId },
             orderBy: { timestamp: 'desc' },
             take: limit,
         });
     }
 
-    async findById(id: string): Promise<SecurityEvent | null> {
-        return this.prisma.securityEvent.findUnique({
-            where: { id },
+    async findById(tenantId: string, id: string): Promise<SecurityEvent | null> {
+        return this.prisma.securityEvent.findFirst({
+            where: { id, tenantId },
         });
     }
 
-    async getStats(): Promise<any> {
+    async getStats(tenantId: string): Promise<any> {
         const now = new Date();
         const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
         const [total, last24hCount, bySeverity, byType] = await Promise.all([
-            this.prisma.securityEvent.count(),
-            this.prisma.securityEvent.count({ where: { timestamp: { gte: last24h } } }),
+            this.prisma.securityEvent.count({ where: { tenantId } }),
+            this.prisma.securityEvent.count({ where: { tenantId, timestamp: { gte: last24h } } }),
             this.prisma.securityEvent.groupBy({
                 by: ['severity'],
+                where: { tenantId },
                 _count: { severity: true },
             }),
             this.prisma.securityEvent.groupBy({
                 by: ['eventType'],
+                where: { tenantId },
                 _count: { eventType: true },
             }),
         ]);
@@ -91,17 +95,17 @@ export class EventsService {
         };
     }
 
-    async findUnprocessed(limit: number = 100): Promise<SecurityEvent[]> {
+    async findUnprocessed(tenantId?: string, limit: number = 100): Promise<SecurityEvent[]> {
         return this.prisma.securityEvent.findMany({
-            where: { status: 'Pending' },
+            where: tenantId ? { status: 'Pending', tenantId } : { status: 'Pending' },
             orderBy: { timestamp: 'asc' },
             take: limit,
         });
     }
 
-    async markAsProcessed(ids: string[], status: string = 'Processed'): Promise<void> {
+    async markAsProcessed(ids: string[], status: string = 'Processed', tenantId?: string): Promise<void> {
         await this.prisma.securityEvent.updateMany({
-            where: { id: { in: ids } },
+            where: tenantId ? { id: { in: ids }, tenantId } : { id: { in: ids } },
             data: { status },
         });
     }

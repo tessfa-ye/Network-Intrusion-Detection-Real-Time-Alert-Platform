@@ -1,12 +1,16 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, Query, BadRequestException, InternalServerErrorException, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { TenantId } from '../common/decorators/tenant-id.decorator';
 import { AlertsService } from './alerts.service';
 
 @Controller('alerts')
+@UseGuards(JwtAuthGuard)
 export class AlertsController {
     constructor(private readonly alertsService: AlertsService) { }
 
     @Get()
     async findAll(
+        @TenantId() tenantId: string,
         @Query('limit') limit?: number,
         @Query('status') status?: string,
         @Query('severity') severity?: string,
@@ -19,16 +23,17 @@ export class AlertsController {
         if (startDate) filters.startDate = startDate;
         if (endDate) filters.endDate = endDate;
 
-        return this.alertsService.findAll(filters, limit || 100);
+        return this.alertsService.findAll(tenantId, filters, limit || 100);
     }
 
     @Get('stats')
-    async getStats() {
-        return this.alertsService.getStats();
+    async getStats(@TenantId() tenantId: string) {
+        return this.alertsService.getStats(tenantId);
     }
 
     @Get('export')
     async export(
+        @TenantId() tenantId: string,
         @Query('status') status?: string,
         @Query('severity') severity?: string,
     ) {
@@ -36,16 +41,17 @@ export class AlertsController {
         if (status) filters.status = status;
         if (severity) filters.severity = severity;
         
-        return this.alertsService.exportCsv(filters);
+        return this.alertsService.exportCsv(tenantId, filters);
     }
 
     @Get(':id')
-    async findOne(@Param('id') id: string) {
-        return this.alertsService.findById(id);
+    async findOne(@TenantId() tenantId: string, @Param('id') id: string) {
+        return this.alertsService.findByIdSafe(tenantId, id);
     }
 
     @Patch('bulk-update')
     async bulkUpdate(
+        @TenantId() tenantId: string,
         @Body('alertIds') alertIds: string[],
         @Body('status') status?: string,
         @Body('action') action?: 'delete',
@@ -57,7 +63,7 @@ export class AlertsController {
         }
 
         if (action === 'delete') {
-            return this.alertsService.bulkDelete(alertIds);
+            return this.alertsService.bulkDelete(tenantId, alertIds);
         }
 
         if (!status) {
@@ -65,7 +71,7 @@ export class AlertsController {
         }
 
         try {
-            return await this.alertsService.bulkUpdateStatus(alertIds, status);
+            return await this.alertsService.bulkUpdateStatus(tenantId, alertIds, status);
         } catch (error) {
             console.error('❌ Bulk update error in controller:', error);
             throw new InternalServerErrorException(`Bulk update failed: ${error.message}`);
@@ -74,34 +80,37 @@ export class AlertsController {
 
     @Patch(':id/assign')
     async assignAlert(
+        @TenantId() tenantId: string,
         @Param('id') id: string,
         @Body('userId') userId: string,
     ) {
         // Allow empty string or null for unassignment
-        return this.alertsService.assignAlert(id, userId);
+        return this.alertsService.assignAlert(tenantId, id, userId);
     }
 
     @Patch(':id')
     async updateStatus(
+        @TenantId() tenantId: string,
         @Param('id') id: string,
         @Body('status') status: string,
         @Body('userId') userId?: string,
     ) {
-        return this.alertsService.updateStatus(id, status, userId);
+        return this.alertsService.updateStatus(tenantId, id, status, userId);
     }
 
     @Post(':id/notes')
     async addNote(
+        @TenantId() tenantId: string,
         @Param('id') id: string,
         @Body('userId') userId: string,
         @Body('note') note: string,
     ) {
-        return this.alertsService.addNote(id, userId, note);
+        return this.alertsService.addNote(tenantId, id, userId, note);
     }
 
     // Test endpoint for WebSocket real-time testing
     @Post('test')
-    async createTestAlert(@Body() body?: { severity?: string; summary?: string }) {
+    async createTestAlert(@TenantId() tenantId: string, @Body() body?: { severity?: string; summary?: string }) {
         const testAlert = {
             eventIds: [],
             ruleId: 'test_realtime_websocket',
@@ -112,6 +121,6 @@ export class AlertsController {
             affectedAssets: ['test-server-realtime'],
         };
 
-        return this.alertsService.create(testAlert as any);
+        return this.alertsService.create(tenantId, testAlert as any);
     }
 }

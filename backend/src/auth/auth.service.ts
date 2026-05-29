@@ -36,6 +36,7 @@ export class AuthService {
             email: user.email,
             sub: userId,
             role: user.role,
+            tenantId: user.tenantId,
         };
 
         const accessToken = this.jwtService.sign(payload);
@@ -64,7 +65,11 @@ export class AuthService {
             throw new UnauthorizedException('Email already exists');
         }
 
-        const user = await this.usersService.create({
+        if (!userData.tenantId) {
+            throw new UnauthorizedException('Tenant ID is required for registration');
+        }
+
+        const user = await this.usersService.create(userData.tenantId, {
             ...userData,
             authProvider: 'local',
         });
@@ -75,7 +80,7 @@ export class AuthService {
     async refresh(refreshToken: string) {
         try {
             const payload = this.jwtService.verify(refreshToken);
-            const user = await this.usersService.findById(payload.sub);
+            const user = await this.usersService.findById(payload.tenantId, payload.sub);
 
             if (!user) {
                 throw new UnauthorizedException('Invalid token');

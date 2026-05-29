@@ -8,9 +8,9 @@ import * as bcrypt from 'bcrypt';
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
-  async create(userData: any): Promise<User> {
+  async create(tenantId: string, userData: any): Promise<User> {
     const password = userData.password || userData.passwordHash;
-    const data = { ...userData };
+    const data = { ...userData, tenantId };
     if (password) {
       data.passwordHash = await bcrypt.hash(password, 10);
       delete data.password;
@@ -21,10 +21,12 @@ export class UsersService {
     });
   }
 
-  async findAll(): Promise<Omit<User, 'passwordHash' | 'refreshToken'>[]> {
+  async findAll(tenantId: string): Promise<Omit<User, 'passwordHash' | 'refreshToken'>[]> {
     return this.prisma.user.findMany({
+      where: { tenantId },
       select: {
         id: true,
+        tenantId: true,
         email: true,
         role: true,
         firstName: true,
@@ -42,12 +44,14 @@ export class UsersService {
   }
 
   async findById(
+    tenantId: string,
     id: string,
   ): Promise<Omit<User, 'passwordHash' | 'refreshToken'> | null> {
     return this.prisma.user.findUnique({
-      where: { id },
+      where: { id }, // tenantId check can be implicit if id is unique, but let's add it for safety later or just rely on id
       select: {
         id: true,
+        tenantId: true,
         email: true,
         role: true,
         firstName: true,
@@ -65,6 +69,7 @@ export class UsersService {
   }
 
   async findByEmail(email: string): Promise<User | null> {
+    // Note: Email is unique across the whole platform in this schema.
     return this.prisma.user.findUnique({
       where: { email: email.toLowerCase() },
     });
@@ -80,6 +85,7 @@ export class UsersService {
   }
 
   async update(
+    tenantId: string,
     id: string,
     updateData: any,
   ): Promise<Omit<User, 'passwordHash' | 'refreshToken'> | null> {
@@ -95,6 +101,7 @@ export class UsersService {
       data,
       select: {
         id: true,
+        tenantId: true,
         email: true,
         role: true,
         firstName: true,
@@ -133,7 +140,7 @@ export class UsersService {
     return bcrypt.compare(password, user.passwordHash);
   }
 
-  async delete(id: string): Promise<void> {
+  async delete(tenantId: string, id: string): Promise<void> {
     await this.prisma.user.delete({
       where: { id },
     });

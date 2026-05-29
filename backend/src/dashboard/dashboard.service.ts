@@ -5,7 +5,7 @@ import { PrismaService } from '../prisma.service';
 export class DashboardService {
   constructor(private prisma: PrismaService) {}
 
-  async getStats() {
+  async getStats(tenantId: string) {
     const now = new Date();
     const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
     const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -20,15 +20,16 @@ export class DashboardService {
       eventActivity,
       alertActivity,
     ] = await Promise.all([
-      this.prisma.alert.count(),
-      this.prisma.alert.count({ where: { createdAt: { gte: oneHourAgo } } }),
-      this.prisma.securityEvent.count(),
+      this.prisma.alert.count({ where: { tenantId } }),
+      this.prisma.alert.count({ where: { tenantId, createdAt: { gte: oneHourAgo } } }),
+      this.prisma.securityEvent.count({ where: { tenantId } }),
       this.prisma.securityEvent.count({
-        where: { timestamp: { gte: oneHourAgo } },
+        where: { tenantId, timestamp: { gte: oneHourAgo } },
       }),
-      this.prisma.detectionRule.count({ where: { enabled: true } }),
+      this.prisma.detectionRule.count({ where: { tenantId, enabled: true } }),
       this.prisma.alert.groupBy({
         by: ['severity'],
+        where: { tenantId },
         _count: { severity: true },
       }),
       this.prisma.$queryRaw<
@@ -37,6 +38,7 @@ export class DashboardService {
                 SELECT EXTRACT(HOUR FROM timestamp) as hour, COUNT(*) as count 
                 FROM "SecurityEvent" 
                 WHERE timestamp >= ${twentyFourHoursAgo} 
+                AND "tenantId" = ${tenantId}
                 GROUP BY hour
             `,
       this.prisma.$queryRaw<
@@ -45,6 +47,7 @@ export class DashboardService {
                 SELECT EXTRACT(HOUR FROM "createdAt") as hour, COUNT(*) as count 
                 FROM "Alert" 
                 WHERE "createdAt" >= ${twentyFourHoursAgo} 
+                AND "tenantId" = ${tenantId}
                 GROUP BY hour
             `,
     ]);

@@ -19,93 +19,96 @@ export class FirewallService implements OnModuleInit {
         }
     }
 
-    async refreshCache() {
+    async refreshCache(tenantId?: string) {
+        // Simple global refresh for demo purposes, but in production, we should scope caching
         const [blocks, allows] = await Promise.all([
-            this.prisma.blacklist.findMany({ where: { isActive: true } }),
-            this.prisma.allowlist.findMany(),
+            this.prisma.blacklist.findMany({ where: tenantId ? { tenantId, isActive: true } : { isActive: true } }),
+            this.prisma.allowlist.findMany(tenantId ? { where: { tenantId } } : undefined),
         ]);
         
-        this.cachedBlacklist = new Set(blocks.map(item => item.ip));
-        this.cachedAllowlist = new Set(allows.map(item => item.ip));
+        // Cache could be made tenant-aware by using composite keys (tenantId:ip)
+        this.cachedBlacklist = new Set(blocks.map(item => `${item.tenantId}:${item.ip}`));
+        this.cachedAllowlist = new Set(allows.map(item => `${item.tenantId}:${item.ip}`));
         
         console.log(`🛡️  Firewall Cache Updated: ${this.cachedBlacklist.size} blocked, ${this.cachedAllowlist.size} allowed.`);
     }
 
-    async blockIp(ip: string, reason: string, severity: string = 'high'): Promise<Blacklist | null> {
+    async blockIp(tenantId: string, ip: string, reason: string, severity: string = 'high'): Promise<Blacklist | null> {
         const isIntelligence = reason.includes('Global Threat Intelligence');
-        if (this.cachedAllowlist.has(ip) && isIntelligence) {
-            console.log(`⚪ IP ${ip} is in allowlist. Skipping automated intelligence block.`);
+        if (this.cachedAllowlist.has(`${tenantId}:${ip}`) && isIntelligence) {
+            console.log(`⚪ IP ${ip} is in allowlist for tenant ${tenantId}. Skipping automated intelligence block.`);
             return null;
         }
 
-        const existing = await this.prisma.blacklist.findUnique({ where: { ip } });
+        const existing = await this.prisma.blacklist.findUnique({ where: { tenantId_ip: { tenantId, ip } } });
         let result: Blacklist;
         
         if (existing) {
             result = await this.prisma.blacklist.update({
-                where: { ip },
+                where: { tenantId_ip: { tenantId, ip } },
                 data: { isActive: true, reason, severity },
             });
         } else {
             result = await this.prisma.blacklist.create({
-                data: { ip, reason, severity },
+                data: { tenantId, ip, reason, severity },
             });
         }
         
-        this.cachedBlacklist.add(ip);
+        this.cachedBlacklist.add(`${tenantId}:${ip}`);
         return result;
     }
 
-    async unblockIp(ip: string): Promise<void> {
-        const original = await this.prisma.blacklist.findUnique({ where: { ip } });
+    async unblockIp(tenantId: string, ip: string): Promise<void> {
+        const original = await this.prisma.blacklist.findUnique({ where: { tenantId_ip: { tenantId, ip } } });
         const reason = original?.reason || '';
         
-        await this.prisma.blacklist.delete({ where: { ip } });
-        this.cachedBlacklist.delete(ip);
+        await this.prisma.blacklist.delete({ where: { tenantId_ip: { tenantId, ip } } });
+        this.cachedBlacklist.delete(`${tenantId}:${ip}`);
 
         const isAutomated = reason.includes('Global Threat Intelligence') || 
                            reason.includes('Sensor') || 
                            reason.includes('Alert') || 
                            reason.includes('Detection');
 
-        if (isAutomated && !this.cachedAllowlist.has(ip)) {
+        if (isAutomated && !this.cachedAllowlist.has(`${tenantId}:${ip}`)) {
             await this.prisma.allowlist.create({ 
                 data: {
+                    tenantId,
                     ip, 
                     reason: 'Manually unblocked by administrator',
                     originalReason: original?.reason,
                     originalSeverity: original?.severity,
                 },
             });
-            this.cachedAllowlist.add(ip);
+            this.cachedAllowlist.add(`${tenantId}:${ip}`);
         }
     }
 
-    isIpBlocked(ip: string): boolean {
-        return this.cachedBlacklist.has(ip);
+    isIpBlocked(tenantId: string, ip: string): boolean {
+        return this.cachedBlacklist.has(`${tenantId}:${ip}`);
     }
 
     getCacheSize(): number {
         return this.cachedBlacklist.size;
     }
 
-    async getBlacklist(): Promise<Blacklist[]> {
-        return this.prisma.blacklist.findMany({ orderBy: { createdAt: 'desc' } });
+    async getBlacklist(tenantId: string): Promise<Blacklist[]> {
+        return this.prisma.blacklist.findMany({ where: { tenantId }, orderBy: { createdAt: 'desc' } });
     }
 
-    async getAllowlist(): Promise<Allowlist[]> {
-        return this.prisma.allowlist.findMany({ orderBy: { createdAt: 'desc' } });
+    async getAllowlist(tenantId: string): Promise<Allowlist[]> {
+        return this.prisma.allowlist.findMany({ where: { tenantId }, orderBy: { createdAt: 'desc' } });
     }
 
-    async removeFromAllowlist(ip: string): Promise<void> {
-        const item = await this.prisma.allowlist.findUnique({ where: { ip } });
+    async removeFromAllowlist(tenantId: string, ip: string): Promise<void> {
+        const item = await this.prisma.allowlist.findUnique({ where: { tenantId_ip: { tenantId, ip } } });
         
-        await this.prisma.allowlist.delete({ where: { ip } });
-        this.cachedAllowlist.delete(ip);
+        await this.prisma.allowlist.delete({ where: { tenantId_ip: { tenantId, ip } } });
+        this.cachedAllowlist.delete(`${tenantId}:${ip}`);
 
         if (item?.originalReason) {
-            console.log(`🛡️ Restoring original block for ${ip}: ${item.originalReason}`);
-            await this.blockIp(ip, item.originalReason, item.originalSeverity || 'high');
+            console.log(`🛡️ Restoring original block for ${ip} in tenant ${tenantId}: ${item.originalReason}`);
+            await this.blockIp(tenantId, ip, item.originalReason, item.originalSeverity || 'high');
         }
     }
 }

@@ -6,11 +6,62 @@ datasource db {
   provider = "postgresql"
 }
 
+// ─── Enums ───────────────────────────────────────────────────────────
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  ANALYST
+  VIEWER
+}
+
+// ─── Tenant (Organization) ───────────────────────────────────────────
+
+model Tenant {
+  id              String    @id @default(uuid())
+  name            String
+  slug            String    @unique
+  apiKey          String    @unique @default(uuid())
+  plan            String    @default("free") // free | pro | enterprise
+
+  // Branding
+  logo            String?
+  primaryColor    String?   @default("#6366f1")
+  secondaryColor  String?   @default("#818cf8")
+
+  // Notification channel config
+  notificationConfig  Json  @default("{\"channels\":{\"email\":{\"enabled\":true,\"recipients\":[]},\"slack\":{\"enabled\":false,\"webhookUrl\":\"\"},\"webhook\":{\"enabled\":false,\"url\":\"\",\"secret\":\"\"},\"push\":{\"enabled\":true,\"minSeverity\":\"high\"}}}")
+
+  // Enterprise encryption
+  encryptionKeyId String?
+
+  active          Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  users           User[]
+  events          SecurityEvent[]
+  alerts          Alert[]
+  rules           DetectionRule[]
+  blacklists      Blacklist[]
+  allowlists      Allowlist[]
+  baselines       IPBaseline[]
+  auditLogs       AuditLog[]
+  notes           InvestigationNote[]
+
+  @@index([slug])
+  @@index([apiKey])
+}
+
+// ─── User ────────────────────────────────────────────────────────────
+
 model User {
   id                      String    @id @default(uuid())
+  tenantId                String
   email                   String    @unique
   passwordHash            String?
-  role                    String    @default("security_officer")
+  role                    UserRole  @default(ANALYST)
   firstName               String
   lastName                String
   phone                   String?
@@ -23,16 +74,21 @@ model User {
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
 
+  tenant                  Tenant    @relation(fields: [tenantId], references: [id])
   assignedAlerts          Alert[]   @relation("AssignedTo")
   createdRules            DetectionRule[]
   investigations          InvestigationNote[]
 
   @@index([email])
+  @@index([tenantId])
   @@index([role, active])
 }
 
+// ─── Security Event ──────────────────────────────────────────────────
+
 model SecurityEvent {
   id            String   @id @default(uuid())
+  tenantId      String
   timestamp     DateTime @default(now())
   eventType     String
   severity      String
@@ -48,8 +104,10 @@ model SecurityEvent {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
   alerts        Alert[]  @relation("EventToAlert")
 
+  @@index([tenantId])
   @@index([sourceIP])
   @@index([targetIP])
   @@index([userId])
@@ -57,8 +115,11 @@ model SecurityEvent {
   @@index([eventType, severity])
 }
 
+// ─── Alert ───────────────────────────────────────────────────────────
+
 model Alert {
   id                 String              @id @default(uuid())
+  tenantId           String
   ruleId             String
   ruleName           String
   severity           String
@@ -71,29 +132,40 @@ model Alert {
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 
+  tenant             Tenant              @relation(fields: [tenantId], references: [id])
   rule               DetectionRule       @relation(fields: [ruleId], references: [id])
   assignee           User?               @relation("AssignedTo", fields: [assignedTo], references: [id])
   events             SecurityEvent[]     @relation("EventToAlert")
   investigationNotes InvestigationNote[]
 
+  @@index([tenantId])
   @@index([status, severity])
   @@index([createdAt])
   @@index([assignedTo])
 }
 
+// ─── Investigation Note ──────────────────────────────────────────────
+
 model InvestigationNote {
   id        String   @id @default(uuid())
+  tenantId  String
   alertId   String
   userId    String
   timestamp DateTime @default(now())
   note      String
 
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
   alert     Alert    @relation(fields: [alertId], references: [id])
   user      User     @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
 }
+
+// ─── Detection Rule ──────────────────────────────────────────────────
 
 model DetectionRule {
   id          String   @id @default(uuid())
+  tenantId    String
   name        String
   description String
   enabled     Boolean  @default(true)
@@ -105,16 +177,21 @@ model DetectionRule {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
   creator     User     @relation(fields: [createdBy], references: [id])
   alerts      Alert[]
 
+  @@index([tenantId])
   @@index([enabled])
   @@index([severity])
 }
 
+// ─── Blacklist ───────────────────────────────────────────────────────
+
 model Blacklist {
   id          String   @id @default(uuid())
-  ip          String   @unique
+  tenantId    String
+  ip          String
   reason      String
   severity    String?
   isActive    Boolean  @default(true)
@@ -123,12 +200,19 @@ model Blacklist {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, ip])
+  @@index([tenantId])
   @@index([ip])
 }
 
+// ─── Allowlist ───────────────────────────────────────────────────────
+
 model Allowlist {
   id               String   @id @default(uuid())
-  ip               String   @unique
+  tenantId         String
+  ip               String
   reason           String
   originalReason   String?
   originalSeverity String?
@@ -136,11 +220,18 @@ model Allowlist {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
+  tenant           Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, ip])
+  @@index([tenantId])
   @@index([ip])
 }
 
+// ─── IP Baseline ─────────────────────────────────────────────────────
+
 model IPBaseline {
   id             String   @id @default(uuid())
+  tenantId       String
   sourceIP       String
   eventType      String
   avgFrequency   Float    @default(0)
@@ -150,6 +241,29 @@ model IPBaseline {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  @@unique([sourceIP, eventType])
+  tenant         Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, sourceIP, eventType])
+  @@index([tenantId])
   @@index([sourceIP])
+}
+
+// ─── Audit Log ───────────────────────────────────────────────────────
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  tenantId    String
+  userId      String
+  action      String
+  resource    String
+  resourceId  String?
+  details     Json     @default("{}")
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, createdAt])
+  @@index([userId])
+  @@index([action])
 }

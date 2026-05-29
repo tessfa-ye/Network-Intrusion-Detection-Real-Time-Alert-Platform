@@ -12,6 +12,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { AnalysisModule } from './analysis/analysis.module';
 import { FirewallModule } from './firewall/firewall.module';
 import { IntelligenceModule } from './intelligence/intelligence.module';
+import { TenantContextMiddleware } from './common/middleware/tenant-context.middleware';
 
 @Module({
     imports: [
@@ -34,5 +35,11 @@ import { IntelligenceModule } from './intelligence/intelligence.module';
     ],
 })
 // Force re-compilation
-export class AppModule { }
+export class AppModule {
+    configure(consumer: import('@nestjs/common').MiddlewareConsumer) {
+        consumer
+            .apply(TenantContextMiddleware)
+            .forRoutes('*');
+    }
+}
 

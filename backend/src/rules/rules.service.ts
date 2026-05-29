@@ -8,47 +8,47 @@ export class RulesService {
         private prisma: PrismaService,
     ) { }
 
-    async create(ruleData: any): Promise<DetectionRule> {
+    async create(tenantId: string, ruleData: any): Promise<DetectionRule> {
         return this.prisma.detectionRule.create({
-            data: ruleData,
+            data: { ...ruleData, tenantId },
         });
     }
 
-    async findAll(enabled?: boolean): Promise<DetectionRule[]> {
-        const filter = enabled !== undefined ? { enabled } : {};
+    async findAll(tenantId: string, enabled?: boolean): Promise<DetectionRule[]> {
+        const filter = enabled !== undefined ? { enabled, tenantId } : { tenantId };
         return this.prisma.detectionRule.findMany({
             where: filter,
         });
     }
 
-    async findById(id: string): Promise<DetectionRule | null> {
-        return this.prisma.detectionRule.findUnique({
-            where: { id },
+    async findById(tenantId: string, id: string): Promise<DetectionRule | null> {
+        return this.prisma.detectionRule.findFirst({
+            where: { id, tenantId },
         });
     }
 
-    async update(id: string, updateData: Partial<DetectionRule>): Promise<DetectionRule | null> {
+    async update(tenantId: string, id: string, updateData: Partial<DetectionRule>): Promise<DetectionRule | null> {
         // Don't include createdBy in updates
         const { createdBy, ...dataToUpdate } = updateData as any;
-        return this.prisma.detectionRule.update({
-            where: { id },
+        return this.prisma.detectionRule.updateMany({
+            where: { id, tenantId },
             data: dataToUpdate,
+        }).then(res => res.count > 0 ? this.findById(tenantId, id) : null);
+    }
+
+    async delete(tenantId: string, id: string): Promise<void> {
+        await this.prisma.detectionRule.deleteMany({
+            where: { id, tenantId },
         });
     }
 
-    async delete(id: string): Promise<void> {
-        await this.prisma.detectionRule.delete({
-            where: { id },
-        });
-    }
-
-    async getEnabledRules(): Promise<DetectionRule[]> {
+    async getEnabledRules(tenantId: string): Promise<DetectionRule[]> {
         return this.prisma.detectionRule.findMany({
-            where: { enabled: true },
+            where: { enabled: true, tenantId },
         });
     }
 
-    async dryRun(ruleId: string, hoursBack = 24): Promise<{
+    async dryRun(tenantId: string, ruleId: string, hoursBack = 24): Promise<{
         matchedEvents: number;
         totalScanned: number;
         matchRatePercent: number;
@@ -58,12 +58,12 @@ export class RulesService {
         sampleEvents: any[];
         windowHours: number;
     }> {
-        const rule = await this.prisma.detectionRule.findUnique({ where: { id: ruleId } });
+        const rule = await this.prisma.detectionRule.findFirst({ where: { id: ruleId, tenantId } });
         if (!rule) throw new Error('Rule not found');
 
         const since = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
         const events = await this.prisma.securityEvent.findMany({
-            where: { timestamp: { gte: since } },
+            where: { timestamp: { gte: since }, tenantId },
         });
 
         // Inline condition evaluation to avoid circular DI with DetectionEngine
