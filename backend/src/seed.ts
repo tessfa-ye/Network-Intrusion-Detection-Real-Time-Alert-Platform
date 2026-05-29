@@ -18,14 +18,17 @@ async function seed() {
         return;
     }
 
+    const defaultTenantId = '00000000-0000-0000-0000-000000000001';
+
     // Create admin user
     const passwordHash = await bcrypt.hash('Admin123!', 10);
 
     await prisma.user.create({
         data: {
+            tenantId: defaultTenantId,
             email: 'admin@nidas.local',
             passwordHash,
-            role: 'admin',
+            role: 'ADMIN',
             firstName: 'Admin',
             lastName: 'User',
             authProvider: 'local',

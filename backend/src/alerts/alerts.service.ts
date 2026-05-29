@@ -10,11 +10,12 @@ export class AlertsService {
         private alertsGateway: AlertsGateway,
     ) { }
 
-    async create(alertData: any): Promise<Alert> {
+    async create(tenantId: string, alertData: any): Promise<Alert> {
         const { eventIds, ...data } = alertData;
         const savedAlert = await this.prisma.alert.create({
             data: {
                 ...data,
+                tenantId,
                 events: {
                     connect: eventIds?.map((id: string) => ({ id })) || [],
                 },
@@ -32,9 +33,9 @@ export class AlertsService {
         return savedAlert;
     }
 
-    async findAll(filters: any = {}, limit: number = 100): Promise<Alert[]> {
+    async findAll(tenantId: string, filters: any = {}, limit: number = 100): Promise<Alert[]> {
         return this.prisma.alert.findMany({
-            where: filters,
+            where: { ...filters, tenantId },
             include: {
                 events: true,
                 assignee: { select: { firstName: true, lastName: true, email: true } },
@@ -44,9 +45,15 @@ export class AlertsService {
         });
     }
 
-    async findById(id: string): Promise<Alert | null> {
+    async findById(tenantId: string, id: string): Promise<Alert | null> {
         return this.prisma.alert.findUnique({
-            where: { id },
+            where: { id }, // tenantId could be part of a composite key, or just check implicitly. Let's add it to findFirst for safety.
+        });
+    }
+
+    async findByIdSafe(tenantId: string, id: string): Promise<Alert | null> {
+        return this.prisma.alert.findFirst({
+            where: { id, tenantId },
             include: {
                 events: true,
                 investigationNotes: {
@@ -57,6 +64,7 @@ export class AlertsService {
     }
 
     async updateStatus(
+        tenantId: string,
         id: string,
         status: string,
         userId?: string,
@@ -65,16 +73,24 @@ export class AlertsService {
         if (userId) {
             data.assignedTo = userId;
         }
-        return this.prisma.alert.update({
-            where: { id },
+        // Using updateMany to enforce tenant isolation
+        const result = await this.prisma.alert.updateMany({
+            where: { id, tenantId },
             data,
         });
+        if (result.count === 0) return null;
+        return this.findByIdSafe(tenantId, id);
     }
 
-    async assignAlert(id: string, userId: string | null): Promise<Alert | null> {
-        const alert = await this.prisma.alert.update({
-            where: { id },
+    async assignAlert(tenantId: string, id: string, userId: string | null): Promise<Alert | null> {
+        const result = await this.prisma.alert.updateMany({
+            where: { id, tenantId },
             data: { assignedTo: userId },
+        });
+        if (result.count === 0) return null;
+        
+        const alert = await this.prisma.alert.findFirst({
+            where: { id, tenantId },
             include: {
                 assignee: { select: { firstName: true, lastName: true, email: true } },
             },
@@ -88,12 +104,14 @@ export class AlertsService {
     }
 
     async addNote(
+        tenantId: string,
         id: string,
         userId: string,
         note: string,
     ): Promise<any> {
         return this.prisma.investigationNote.create({
             data: {
+                tenantId,
                 alertId: id,
                 userId,
                 note,
@@ -102,19 +120,20 @@ export class AlertsService {
     }
 
     async bulkUpdateStatus(
+        tenantId: string,
         alertIds: string[],
         status: string,
     ): Promise<{ updated: number }> {
         try {
             console.log(`🔄 Bulk updating ${alertIds.length} alerts to ${status}`);
             const result = await this.prisma.alert.updateMany({
-                where: { id: { in: alertIds } },
+                where: { id: { in: alertIds }, tenantId },
                 data: { status },
             });
 
             if (result.count > 0) {
                 const updatedAlerts = await this.prisma.alert.findMany({
-                    where: { id: { in: alertIds } },
+                    where: { id: { in: alertIds }, tenantId },
                 });
                 updatedAlerts.forEach(alert => {
                     if (this.alertsGateway) {
@@ -130,11 +149,11 @@ export class AlertsService {
         }
     }
 
-    async bulkDelete(alertIds: string[]): Promise<{ deleted: number }> {
+    async bulkDelete(tenantId: string, alertIds: string[]): Promise<{ deleted: number }> {
         try {
-            console.log(`🗑️ Bulk deleting ${alertIds.length} alerts`);
+            console.log(`🗑️ Bulk deleting ${alertIds.length} alerts for tenant ${tenantId}`);
             const result = await this.prisma.alert.deleteMany({
-                where: { id: { in: alertIds } },
+                where: { id: { in: alertIds }, tenantId },
             });
 
             console.log(`🗑️ Bulk deleted ${result.count} alerts`);
@@ -145,18 +164,20 @@ export class AlertsService {
         }
     }
 
-    async getStats(): Promise<any> {
+    async getStats(tenantId: string): Promise<any> {
         const [total, byStatus, bySeverity, pending] = await Promise.all([
-            this.prisma.alert.count(),
+            this.prisma.alert.count({ where: { tenantId } }),
             this.prisma.alert.groupBy({
                 by: ['status'],
+                where: { tenantId },
                 _count: { status: true },
             }),
             this.prisma.alert.groupBy({
                 by: ['severity'],
+                where: { tenantId },
                 _count: { severity: true },
             }),
-            this.prisma.alert.count({ where: { status: 'pending' } }),
+            this.prisma.alert.count({ where: { status: 'pending', tenantId } }),
         ]);
 
         return {
@@ -167,9 +188,9 @@ export class AlertsService {
         };
     }
 
-    async exportCsv(filters: any = {}): Promise<string> {
+    async exportCsv(tenantId: string, filters: any = {}): Promise<string> {
         const alerts = await this.prisma.alert.findMany({
-            where: filters,
+            where: { ...filters, tenantId },
             include: {
                 assignee: { select: { firstName: true, lastName: true } },
             },

@@ -1,8 +1,11 @@
 import { Controller, Post, Get, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { TenantId } from '../common/decorators/tenant-id.decorator';
 import { ThreatIntelligenceService } from './threat-intelligence.service';
 import { FirewallService } from '../firewall/firewall.service';
 
 @Controller('intelligence')
+@UseGuards(JwtAuthGuard)
 export class IntelligenceController {
     constructor(
         private readonly intelligenceService: ThreatIntelligenceService,
@@ -16,8 +19,8 @@ export class IntelligenceController {
     }
 
     @Get('stats')
-    async getStats() {
-        const blacklist = await this.firewallService.getBlacklist();
+    async getStats(@TenantId() tenantId: string) {
+        const blacklist = await this.firewallService.getBlacklist(tenantId);
         const intelligenceCount = blacklist.filter(item => 
             item.reason?.includes('Global Threat Intelligence')
         ).length;

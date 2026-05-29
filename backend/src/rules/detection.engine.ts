@@ -20,49 +20,57 @@ export class DetectionEngine {
 
   @Cron(CronExpression.EVERY_30_SECONDS)
   async processEvents() {
-    const events = await this.eventsService.findUnprocessed(200);
+    const events = await this.eventsService.findUnprocessed(undefined, 200);
     if (events.length === 0) return;
 
     console.log(`🔍 Processing ${events.length} new events...`);
-    const rules = await this.rulesService.getEnabledRules();
 
-    for (const rule of rules) {
-      const triggeredGroups = await this.evaluateRule(rule, events);
+    // Group events by tenant
+    const eventsByTenant: Record<string, SecurityEvent[]> = {};
+    events.forEach((e) => {
+      if (!eventsByTenant[e.tenantId]) eventsByTenant[e.tenantId] = [];
+      eventsByTenant[e.tenantId].push(e);
+    });
 
-      for (const [groupKey, triggeredEvents] of Object.entries(
-        triggeredGroups,
-      )) {
-        if (triggeredEvents.length > 0) {
-          // Calculate AI Anomaly Score
-          // Use eventType from first condition if possible
-          const conditions: any = rule.conditions;
-          const eventType = Array.isArray(conditions)
-            ? conditions[0]?.eventType
-            : conditions?.eventType;
+    for (const [tenantId, tenantEvents] of Object.entries(eventsByTenant)) {
+      const rules = await this.rulesService.getEnabledRules(tenantId);
 
-          const anomalyScore = await this.analysisService.calculateAnomalyScore(
-            groupKey,
-            eventType || 'unknown',
-            triggeredEvents.length,
-          );
+      for (const rule of rules) {
+        const triggeredGroups = await this.evaluateRule(rule, tenantEvents);
 
-          await this.createAlert(rule, triggeredEvents, anomalyScore);
+        for (const [groupKey, triggeredEvents] of Object.entries(triggeredGroups)) {
+          if (triggeredEvents.length > 0) {
+            // Calculate AI Anomaly Score
+            const conditions: any = rule.conditions;
+            const eventType = Array.isArray(conditions)
+              ? conditions[0]?.eventType
+              : conditions?.eventType;
 
-          // AUTO BLOCK: If the rule has autoBlock enabled, neutralize the IP instantly
-          if (rule.autoBlock && groupKey !== 'unknown') {
-            console.log(
-              `🤖 SOAR: Auto-blocking IP ${groupKey} due to rule "${rule.name}"`,
-            );
-            await this.firewallService.blockIp(
+            const anomalyScore = await this.analysisService.calculateAnomalyScore(
+              tenantId,
               groupKey,
-              `Automated response triggered by rule: ${rule.name}`,
-              rule.severity,
+              eventType || 'unknown',
+              triggeredEvents.length,
             );
-          }
 
-          // Mark specifically triggered events as Alerted
-          const triggeredIds = triggeredEvents.map((e) => e.id);
-          await this.eventsService.markAsProcessed(triggeredIds, 'Alerted');
+            await this.createAlert(rule, triggeredEvents, anomalyScore);
+
+            if (rule.autoBlock && groupKey !== 'unknown') {
+              console.log(
+                `🤖 SOAR: Auto-blocking IP ${groupKey} due to rule "${rule.name}" for tenant ${tenantId}`,
+              );
+              await this.firewallService.blockIp(
+                tenantId,
+                groupKey,
+                `Automated response triggered by rule: ${rule.name}`,
+                rule.severity,
+              );
+            }
+
+            // Mark specifically triggered events as Alerted
+            const triggeredIds = triggeredEvents.map((e) => e.id);
+            await this.eventsService.markAsProcessed(triggeredIds, 'Alerted', tenantId);
+          }
         }
       }
     }
@@ -72,7 +80,9 @@ export class DetectionEngine {
       .filter((e) => e.status === 'Pending')
       .map((e) => e.id);
 
-    await this.eventsService.markAsProcessed(processedIds, 'Processed');
+    if (processedIds.length > 0) {
+      await this.eventsService.markAsProcessed(processedIds, 'Processed');
+    }
   }
 
   private async evaluateRule(
@@ -234,6 +244,7 @@ export class DetectionEngine {
     // Anti-spam: Check if a similar alert was created in the last 5 minutes
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
     const existingAlerts = await this.alertsService.findAll(
+      events[0]?.tenantId, // all events in the same alert should share tenantId
       {
         ruleId,
         status: 'pending',
@@ -253,7 +264,7 @@ export class DetectionEngine {
 
     const location = events.find((e) => e.location)?.location || null;
 
-    await this.alertsService.create({
+    await this.alertsService.create(events[0]?.tenantId, {
       eventIds,
       ruleId,
       ruleName: rule.name,

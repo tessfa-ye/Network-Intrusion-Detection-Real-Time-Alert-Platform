@@ -11,13 +11,14 @@ export class AnalysisService {
    * Z = (x - mean) / stdDev
    */
   async calculateAnomalyScore(
+    tenantId: string,
     sourceIP: string,
     eventType: string,
     currentCount: number,
   ): Promise<number> {
     const baseline = await this.prisma.iPBaseline.findUnique({
       where: {
-        sourceIP_eventType: { sourceIP, eventType },
+        tenantId_sourceIP_eventType: { tenantId, sourceIP, eventType },
       },
     });
 
@@ -40,21 +41,21 @@ export class AnalysisService {
     console.log('🤖 Analysis Engine: Updating statistical baselines...');
 
     const activeUnits = await this.prisma.securityEvent.groupBy({
-      by: ['sourceIP', 'eventType'],
+      by: ['tenantId', 'sourceIP', 'eventType'],
       where: { timestamp: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
     });
 
     for (const unit of activeUnits) {
-      const { sourceIP, eventType } = unit;
+      const { tenantId, sourceIP, eventType } = unit;
 
       const count = await this.prisma.securityEvent.count({
-        where: { sourceIP, eventType },
+        where: { tenantId, sourceIP, eventType },
       });
 
       if (count > 0) {
         await this.prisma.iPBaseline.upsert({
           where: {
-            sourceIP_eventType: { sourceIP, eventType },
+            tenantId_sourceIP_eventType: { tenantId, sourceIP, eventType },
           },
           update: {
             avgFrequency: (count / 1440) * 1.2, // Rough events per minute estimate
@@ -63,6 +64,7 @@ export class AnalysisService {
             sampleCount: { increment: 1 },
           },
           create: {
+            tenantId,
             sourceIP,
             eventType,
             avgFrequency: (count / 1440) * 1.2,
