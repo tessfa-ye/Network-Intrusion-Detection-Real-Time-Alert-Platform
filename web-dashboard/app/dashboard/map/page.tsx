@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuthStore } from '@/lib/store';
 import { api } from '@/lib/api';
 import { getSocket } from '@/lib/socket';
 import { Card, CardContent } from '@/components/ui/card';
@@ -45,6 +46,8 @@ interface AlertData {
 export default function MapPage() {
     const router = useRouter();
     const queryClient = useQueryClient();
+    const { user } = useAuthStore();
+    const isViewer = user?.role === 'VIEWER';
     const [alerts, setAlerts] = useState<AlertData[]>([]);
     const [selectedThreat, setSelectedThreat] = useState<any>(null);
     const [isBlocking, setIsBlocking] = useState(false);
@@ -132,10 +135,10 @@ export default function MapPage() {
                 id: toastId,
                 description: 'The sensor network is now dropping all packets from this source.',
             });
-            
+
             // Instantly refresh the blacklist state so the button changes
             queryClient.invalidateQueries({ queryKey: ['firewall-blacklist'] });
-            
+
             // Keep the panel open so user sees the "Already Blocked" state transition!
             setIpToBlock(null);
         } catch (err: any) {
@@ -243,6 +246,10 @@ export default function MapPage() {
                                             <ShieldAlert className="mr-2 h-4 w-4" />
                                             Already Blocked - Manage
                                         </Button>
+                                    ) : isViewer ? (
+                                        <div className="w-full bg-slate-100 dark:bg-white/5 text-slate-400 py-3 rounded-xl font-bold uppercase tracking-widest text-[10px] text-center border border-dashed border-slate-200 dark:border-white/5">
+                                            Status: Active
+                                        </div>
                                     ) : (
                                         <Button
                                             className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-5 rounded-xl shadow-lg shadow-red-900/20 group uppercase tracking-widest text-xs"
@@ -254,9 +261,11 @@ export default function MapPage() {
                                         </Button>
                                     )}
                                     <p className="mt-2 text-[10px] text-center text-slate-400 italic font-medium uppercase tracking-tighter leading-tight px-2">
-                                        {blacklist?.some((b: any) => b.ip === selectedThreat.sourceIP) 
-                                            ? "This source is already neutralized by the firewall." 
-                                            : "Note: Disconnects all traffic from this source."}
+                                        {blacklist?.some((b: any) => b.ip === selectedThreat.sourceIP)
+                                            ? "This source is already neutralized by the firewall."
+                                            : isViewer
+                                                ? "Viewers do not have permission to execute kill switches."
+                                                : "Note: Disconnects all traffic from this source."}
                                     </p>
                                 </div>
                             </div>

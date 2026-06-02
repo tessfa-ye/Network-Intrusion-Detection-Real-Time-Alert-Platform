@@ -18,13 +18,13 @@ export class UsersController {
     }
 
     @Get()
-    @Roles('ADMIN', 'SUPER_ADMIN')
+    @Roles('ADMIN', 'SUPER_ADMIN', 'ANALYST', 'VIEWER')
     async findAll(@TenantId() tenantId: string) {
         return this.usersService.findAll(tenantId);
     }
 
     @Get(':id')
-    @Roles('ADMIN', 'SUPER_ADMIN', 'ANALYST')
+    @Roles('ADMIN', 'SUPER_ADMIN', 'ANALYST', 'VIEWER')
     async findOne(@TenantId() tenantId: string, @Param('id') id: string) {
         return this.usersService.findById(tenantId, id);
     }

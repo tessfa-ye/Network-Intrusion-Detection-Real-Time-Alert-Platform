@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, BadRequestException, InternalServerErrorException, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, Query, BadRequestException, InternalServerErrorException, UseGuards, Req } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TenantId } from '../common/decorators/tenant-id.decorator';
 import { AlertsService } from './alerts.service';
@@ -108,9 +108,10 @@ export class AlertsController {
     async addNote(
         @TenantId() tenantId: string,
         @Param('id') id: string,
-        @Body('userId') userId: string,
+        @Req() req: any,
         @Body('note') note: string,
     ) {
+        const userId = req.user.userId;
         return this.alertsService.addNote(tenantId, id, userId, note);
     }
 

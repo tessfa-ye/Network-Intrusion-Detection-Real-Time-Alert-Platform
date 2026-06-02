@@ -2,14 +2,15 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuthStore } from '@/lib/store';
 import { api } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { 
-    ShieldCheck, 
-    ShieldAlert, 
-    Search, 
-    RefreshCcw, 
+import {
+    ShieldCheck,
+    ShieldAlert,
+    Search,
+    RefreshCcw,
     ExternalLink,
     History,
     Globe,
@@ -18,13 +19,13 @@ import {
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { 
-    Table, 
-    TableBody, 
-    TableCell, 
-    TableHead, 
-    TableHeader, 
-    TableRow 
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow
 } from '@/components/ui/table';
 import { toast } from 'sonner';
 import {
@@ -52,6 +53,8 @@ interface BlacklistItem {
 
 export default function FirewallPage() {
     const queryClient = useQueryClient();
+    const { user } = useAuthStore();
+    const isViewer = user?.role === 'VIEWER';
     const [searchTerm, setSearchTerm] = useState('');
     const [ipToUnblock, setIpToUnblock] = useState<string | null>(null);
 
@@ -93,7 +96,7 @@ export default function FirewallPage() {
         },
         onSuccess: (_, ip) => {
             toast.success(`Access restored for ${ip}`, {
-                description: 'The IP has been moved to the Allowlist and will not be re-blocked by global feeds.'
+                description: 'The IP has been removed from the blacklist'
             });
             queryClient.invalidateQueries({ queryKey: ['blacklist'] });
             queryClient.invalidateQueries({ queryKey: ['allowlist'] });
@@ -129,7 +132,7 @@ export default function FirewallPage() {
 
     const currentList = viewMode === 'manual' ? manualBlocks : viewMode === 'intelligence' ? intelBlocks : allowlist;
 
-    const filteredList = currentList.filter(item => 
+    const filteredList = currentList.filter(item =>
         item.ip.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (item.reason || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -151,19 +154,21 @@ export default function FirewallPage() {
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => syncMutation.mutate()}
-                        disabled={syncMutation.isPending}
-                        className="bg-amber-500/10 text-amber-500 border-amber-500/20 hover:bg-amber-500/20"
-                    >
-                        {syncMutation.isPending ? <RefreshCcw className="h-4 w-4 mr-2 animate-spin" /> : <Globe className="h-4 w-4 mr-2" />}
-                        Sync Intelligence
-                    </Button>
-                    <Button 
-                        variant="outline" 
-                        size="sm" 
+                    {!isViewer && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => syncMutation.mutate()}
+                            disabled={syncMutation.isPending}
+                            className="bg-amber-500/10 text-amber-500 border-amber-500/20 hover:bg-amber-500/20"
+                        >
+                            {syncMutation.isPending ? <RefreshCcw className="h-4 w-4 mr-2 animate-spin" /> : <Globe className="h-4 w-4 mr-2" />}
+                            Sync Intelligence
+                        </Button>
+                    )}
+                    <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => {
                             refetch();
                             refetchIntel();
@@ -178,18 +183,16 @@ export default function FirewallPage() {
                 </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card 
-                    className={`border-white/5 shadow-sm cursor-pointer transition-all duration-200 group ${
-                        viewMode === 'intelligence' 
-                        ? 'bg-amber-500/10 ring-1 ring-amber-500/50' 
-                        : 'bg-white dark:bg-[#0b1120] hover:bg-slate-50 dark:hover:bg-white/5'
-                    }`}
+                <Card
+                    className={`border-white/5 shadow-sm cursor-pointer transition-all duration-200 group ${viewMode === 'intelligence'
+                            ? 'bg-amber-500/10 ring-1 ring-amber-500/50'
+                            : 'bg-white dark:bg-[#0b1120] hover:bg-slate-50 dark:hover:bg-white/5'
+                        }`}
                     onClick={() => setViewMode('intelligence')}
                 >
                     <CardHeader className="pb-2">
-                        <CardTitle className={`text-sm font-medium flex items-center justify-between uppercase tracking-wider ${
-                            viewMode === 'intelligence' ? 'text-amber-500' : 'text-muted-foreground'
-                        }`}>
+                        <CardTitle className={`text-sm font-medium flex items-center justify-between uppercase tracking-wider ${viewMode === 'intelligence' ? 'text-amber-500' : 'text-muted-foreground'
+                            }`}>
                             <div className="flex items-center gap-2">
                                 <Zap className="h-4 w-4" />
                                 Intelligence Feeds
@@ -220,18 +223,16 @@ export default function FirewallPage() {
                     </CardContent>
                 </Card>
 
-                <Card 
-                    className={`border-white/5 shadow-sm cursor-pointer transition-all duration-200 group ${
-                        viewMode === 'allowlist' 
-                        ? 'bg-blue-500/10 ring-1 ring-blue-500/50' 
-                        : 'bg-white dark:bg-[#0b1120] hover:bg-slate-50 dark:hover:bg-white/5'
-                    }`}
+                <Card
+                    className={`border-white/5 shadow-sm cursor-pointer transition-all duration-200 group ${viewMode === 'allowlist'
+                            ? 'bg-blue-500/10 ring-1 ring-blue-500/50'
+                            : 'bg-white dark:bg-[#0b1120] hover:bg-slate-50 dark:hover:bg-white/5'
+                        }`}
                     onClick={() => setViewMode('allowlist')}
                 >
                     <CardHeader className="pb-2">
-                        <CardTitle className={`text-sm font-medium flex items-center justify-between uppercase tracking-wider ${
-                            viewMode === 'allowlist' ? 'text-blue-500' : 'text-muted-foreground'
-                        }`}>
+                        <CardTitle className={`text-sm font-medium flex items-center justify-between uppercase tracking-wider ${viewMode === 'allowlist' ? 'text-blue-500' : 'text-muted-foreground'
+                            }`}>
                             <div className="flex items-center gap-2">
                                 <ShieldCheck className="h-4 w-4" />
                                 Allowlist (VIP)
@@ -253,9 +254,9 @@ export default function FirewallPage() {
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="flex-1 flex items-center gap-4">
                             {viewMode !== 'manual' && (
-                                <Button 
-                                    variant="outline" 
-                                    size="sm" 
+                                <Button
+                                    variant="outline"
+                                    size="sm"
                                     onClick={() => setViewMode('manual')}
                                     className="bg-slate-900 dark:bg-slate-800 text-white hover:bg-slate-800 dark:hover:bg-slate-700 border-none shadow-md"
                                 >
@@ -270,18 +271,18 @@ export default function FirewallPage() {
                                     {viewMode === 'allowlist' && <Badge className="bg-blue-500/20 text-blue-500 border-blue-500/20 uppercase text-[10px]">Trusted</Badge>}
                                 </CardTitle>
                                 <CardDescription>
-                                    {viewMode === 'manual' 
-                                        ? 'History of manual blocks and sensor-detected threats.' 
+                                    {viewMode === 'manual'
+                                        ? 'History of manual blocks and sensor-detected threats.'
                                         : viewMode === 'intelligence'
-                                        ? 'Automatically blocked IPs from global Emerging Threats lists.'
-                                        : 'These IPs are explicitly allowed and will never be blocked by the system.'
+                                            ? 'Automatically blocked IPs from global Emerging Threats lists.'
+                                            : 'These IPs are explicitly allowed and will never be blocked by the system.'
                                     }
                                 </CardDescription>
                             </div>
                         </div>
                         <div className="relative w-full md:w-72 self-end">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                            <Input 
+                            <Input
                                 placeholder={viewMode === 'manual' ? "Filter manual blocks..." : viewMode === 'intelligence' ? "Search threat feed..." : "Search allowlist..."}
                                 className="pl-9 bg-slate-50 dark:bg-[#020617] border-white/10"
                                 value={searchTerm}
@@ -299,19 +300,19 @@ export default function FirewallPage() {
                                     <TableHead className="font-bold text-slate-400">Source</TableHead>
                                     <TableHead className="font-bold text-slate-400">Region</TableHead>
                                     <TableHead className="font-bold text-slate-400">Reason</TableHead>
-                                    <TableHead className="font-bold text-slate-400 text-right">Actions</TableHead>
+                                    {!isViewer && <TableHead className="font-bold text-slate-400 text-right">Actions</TableHead>}
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {isLoading ? (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="text-center py-10 text-slate-500 italic">
+                                        <TableCell colSpan={isViewer ? 4 : 5} className="text-center py-10 text-slate-500 italic">
                                             Scanning registry database...
                                         </TableCell>
                                     </TableRow>
                                 ) : filteredList.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="text-center py-10 text-slate-500 italic">
+                                        <TableCell colSpan={isViewer ? 4 : 5} className="text-center py-10 text-slate-500 italic">
                                             No blocked IPs found in the registry.
                                         </TableCell>
                                     </TableRow>
@@ -339,36 +340,38 @@ export default function FirewallPage() {
                                             <TableCell className="text-sm max-w-xs truncate text-slate-500" title={item.reason}>
                                                 {item.reason}
                                             </TableCell>
-                                            <TableCell className="text-right">
-                                                {viewMode === 'allowlist' ? (
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        size="sm"
-                                                        className="text-red-500 hover:bg-red-500/10 hover:text-red-400"
-                                                        onClick={async () => {
-                                                            await api.delete(`/firewall/allowlist/${encodeURIComponent(item.ip)}`);
-                                                            queryClient.invalidateQueries({ queryKey: ['blacklist'] });
-                                                            queryClient.invalidateQueries({ queryKey: ['allowlist'] });
-                                                            queryClient.invalidateQueries({ queryKey: ['intelligence-stats'] });
-                                                            toast.success('Removed from Allowlist', { description: `${item.ip} can now be blocked again.` });
-                                                        }}
-                                                    >
-                                                        <ShieldAlert className="h-4 w-4 mr-2" />
-                                                        Block Again
-                                                    </Button>
-                                                ) : (
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        size="sm"
-                                                        className="text-blue-500 hover:bg-blue-500/10 hover:text-blue-400"
-                                                        disabled={unblockMutation.isPending}
-                                                        onClick={() => setIpToUnblock(item.ip)}
-                                                    >
-                                                        <ShieldCheck className="h-4 w-4 mr-2" />
-                                                        Unblock
-                                                    </Button>
-                                                )}
-                                            </TableCell>
+                                            {!isViewer && (
+                                                <TableCell className="text-right">
+                                                    {viewMode === 'allowlist' ? (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="text-red-500 hover:bg-red-500/10 hover:text-red-400"
+                                                            onClick={async () => {
+                                                                await api.delete(`/firewall/allowlist/${encodeURIComponent(item.ip)}`);
+                                                                queryClient.invalidateQueries({ queryKey: ['blacklist'] });
+                                                                queryClient.invalidateQueries({ queryKey: ['allowlist'] });
+                                                                queryClient.invalidateQueries({ queryKey: ['intelligence-stats'] });
+                                                                toast.success('Removed from Allowlist', { description: `${item.ip} can now be blocked again.` });
+                                                            }}
+                                                        >
+                                                            <ShieldAlert className="h-4 w-4 mr-2" />
+                                                            Block Again
+                                                        </Button>
+                                                    ) : (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="text-blue-500 hover:bg-blue-500/10 hover:text-blue-400"
+                                                            disabled={unblockMutation.isPending}
+                                                            onClick={() => setIpToUnblock(item.ip)}
+                                                        >
+                                                            <ShieldCheck className="h-4 w-4 mr-2" />
+                                                            Unblock
+                                                        </Button>
+                                                    )}
+                                                </TableCell>
+                                            )}
                                         </TableRow>
                                     ))
                                 )}
@@ -395,7 +398,7 @@ export default function FirewallPage() {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel className="bg-slate-800 border-white/5 text-white hover:bg-slate-700">Cancel</AlertDialogCancel>
-                        <AlertDialogAction 
+                        <AlertDialogAction
                             className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
                             onClick={() => ipToUnblock && unblockMutation.mutate(ipToUnblock)}
                         >

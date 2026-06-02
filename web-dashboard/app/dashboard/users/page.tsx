@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { User } from '@/types';
+import { useAuthStore } from '@/lib/store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -32,14 +33,16 @@ import { Loader2, RefreshCw, Edit, Trash2, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { UserForm } from './user-form';
 
-const roleColors = {
-    admin: 'bg-purple-500 hover:bg-purple-600',
-    security_officer: 'bg-blue-500 hover:bg-blue-600',
-    viewer: 'bg-gray-500 hover:bg-gray-600',
+const roleColors: Record<string, string> = {
+    ADMIN: 'bg-purple-500 hover:bg-purple-600',
+    ANALYST: 'bg-blue-500 hover:bg-blue-600',
+    VIEWER: 'bg-gray-500 hover:bg-gray-600',
 };
 
 export default function UsersPage() {
     const queryClient = useQueryClient();
+    const userRole = useAuthStore((state) => state.user?.role);
+    const isAdmin = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN';
     const [search, setSearch] = useState('');
     const [roleFilter, setRoleFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('all');
@@ -101,21 +104,23 @@ export default function UsersPage() {
                         <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                         Refresh
                     </Button>
-                    <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-                        <DialogTrigger asChild>
-                            <Button size="sm">
-                                <UserPlus className="mr-2 h-4 w-4" />
-                                Create User
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                            <DialogHeader>
-                                <DialogTitle>Create New User</DialogTitle>
-                                <DialogDescription>Add a new user to the system</DialogDescription>
-                            </DialogHeader>
-                            <UserForm onSuccess={() => setCreateDialogOpen(false)} />
-                        </DialogContent>
-                    </Dialog>
+                    {isAdmin && (
+                        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button size="sm">
+                                    <UserPlus className="mr-2 h-4 w-4" />
+                                    Create User
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                                <DialogHeader>
+                                    <DialogTitle>Create New User</DialogTitle>
+                                    <DialogDescription>Add a new user to the system</DialogDescription>
+                                </DialogHeader>
+                                <UserForm onSuccess={() => setCreateDialogOpen(false)} />
+                            </DialogContent>
+                        </Dialog>
+                    )}
                 </div>
             </div>
 
@@ -133,9 +138,9 @@ export default function UsersPage() {
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all">All Roles</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="security_officer">Security Officer</SelectItem>
-                        <SelectItem value="viewer">Viewer</SelectItem>
+                        <SelectItem value="ADMIN">Admin</SelectItem>
+                        <SelectItem value="ANALYST">Analyst</SelectItem>
+                        <SelectItem value="VIEWER">Viewer</SelectItem>
                     </SelectContent>
                 </Select>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -168,13 +173,13 @@ export default function UsersPage() {
                                     <TableHead>Role</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead>Last Login</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
+                                    {isAdmin && <TableHead className="text-right">Actions</TableHead>}
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {filteredUsers.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="text-center text-muted-foreground">
+                                        <TableCell colSpan={isAdmin ? 6 : 5} className="text-center text-muted-foreground">
                                             No users found
                                         </TableCell>
                                     </TableRow>
@@ -200,32 +205,34 @@ export default function UsersPage() {
                                             <TableCell>
                                                 {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
                                             </TableCell>
-                                            <TableCell className="text-right">
-                                                <div className="flex justify-end gap-2">
-                                                    <Dialog open={editingUser?.id === user.id} onOpenChange={(open) => !open && setEditingUser(null)}>
-                                                        <DialogTrigger asChild>
-                                                            <Button variant="ghost" size="sm" onClick={() => setEditingUser(user)}>
-                                                                <Edit className="h-4 w-4" />
-                                                            </Button>
-                                                        </DialogTrigger>
-                                                        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                                                            <DialogHeader>
-                                                                <DialogTitle>Edit User</DialogTitle>
-                                                                <DialogDescription>Update user information</DialogDescription>
-                                                            </DialogHeader>
-                                                            <UserForm user={editingUser} onSuccess={() => setEditingUser(null)} />
-                                                        </DialogContent>
-                                                    </Dialog>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => setDeletingUser(user)}
-                                                        className="text-red-500 hover:text-red-700"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            </TableCell>
+                                            {isAdmin && (
+                                                <TableCell className="text-right">
+                                                    <div className="flex justify-end gap-2">
+                                                        <Dialog open={editingUser?.id === user.id} onOpenChange={(open) => !open && setEditingUser(null)}>
+                                                            <DialogTrigger asChild>
+                                                                <Button variant="ghost" size="sm" onClick={() => setEditingUser(user)}>
+                                                                    <Edit className="h-4 w-4" />
+                                                                </Button>
+                                                            </DialogTrigger>
+                                                            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                                                                <DialogHeader>
+                                                                    <DialogTitle>Edit User</DialogTitle>
+                                                                    <DialogDescription>Update user information</DialogDescription>
+                                                                </DialogHeader>
+                                                                <UserForm user={editingUser} onSuccess={() => setEditingUser(null)} />
+                                                            </DialogContent>
+                                                        </Dialog>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => setDeletingUser(user)}
+                                                            className="text-red-500 hover:text-red-700"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            )}
                                         </TableRow>
                                     ))
                                 )}

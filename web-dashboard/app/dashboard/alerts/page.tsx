@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { useAuthStore } from '@/lib/store';
 import { getSocket } from '@/lib/socket';
 import { NidasAlert } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,6 +42,8 @@ const statusColors = {
 
 export default function AlertsPage() {
     const router = useRouter();
+    const { user } = useAuthStore();
+    const isViewer = user?.role === 'VIEWER';
     const [alerts, setAlerts] = useState<NidasAlert[]>([]);
     const [selectedSeverity, setSelectedSeverity] = useState<string>('all');
     const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -268,12 +271,14 @@ export default function AlertsPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead className="w-[50px]">
-                                        <Checkbox
-                                            checked={filteredAlerts.length > 0 && selectedAlerts.size === filteredAlerts.length}
-                                            onCheckedChange={(checked) => handleSelectAll(checked as boolean)}
-                                        />
-                                    </TableHead>
+                                    {!isViewer && (
+                                        <TableHead className="w-[50px]">
+                                            <Checkbox
+                                                checked={filteredAlerts.length > 0 && selectedAlerts.size === filteredAlerts.length}
+                                                onCheckedChange={(checked) => handleSelectAll(checked as boolean)}
+                                            />
+                                        </TableHead>
+                                    )}
                                     <TableHead>Rule Name</TableHead>
                                     <TableHead>Severity</TableHead>
                                     <TableHead>Status</TableHead>
@@ -285,7 +290,7 @@ export default function AlertsPage() {
                             <TableBody>
                                 {filteredAlerts.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={7} className="text-center text-muted-foreground">
+                                        <TableCell colSpan={isViewer ? 6 : 7} className="text-center text-muted-foreground">
                                             No alerts found
                                         </TableCell>
                                     </TableRow>
@@ -301,12 +306,14 @@ export default function AlertsPage() {
                                                 router.push(`/dashboard/alerts/${alert.id}`);
                                             }}
                                         >
-                                            <TableCell>
-                                                <Checkbox
-                                                    checked={selectedAlerts.has(alert.id)}
-                                                    onCheckedChange={(checked) => handleSelectAlert(alert.id, checked as boolean)}
-                                                />
-                                            </TableCell>
+                                            {!isViewer && (
+                                                <TableCell>
+                                                    <Checkbox
+                                                        checked={selectedAlerts.has(alert.id)}
+                                                        onCheckedChange={(checked) => handleSelectAlert(alert.id, checked as boolean)}
+                                                    />
+                                                </TableCell>
+                                            )}
                                             <TableCell className="font-medium">{alert.ruleName}</TableCell>
                                             <TableCell>
                                                 <Badge className={severityColors[alert.severity]}>
@@ -322,6 +329,7 @@ export default function AlertsPage() {
                                                 <div onClick={(e) => e.stopPropagation()}>
                                                     <AssignUserSelect
                                                         value={(alert.assignedTo as any)?.id || (typeof alert.assignedTo === 'string' ? alert.assignedTo : undefined)}
+                                                        disabled={isViewer}
                                                         onSelect={async (userId) => {
                                                             try {
                                                                 await api.patch(`/alerts/${alert.id}/assign`, { userId });
