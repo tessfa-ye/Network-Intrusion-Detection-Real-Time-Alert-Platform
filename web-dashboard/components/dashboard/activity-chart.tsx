@@ -25,7 +25,7 @@ export function ActivityChart({ data = [] }: ActivityChartProps) {
     };
 
     return (
-        <ResponsiveContainer width="100%" height={200}>
+        <ResponsiveContainer width="100%" height={200} minWidth={0}>
             <LineChart data={data}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis

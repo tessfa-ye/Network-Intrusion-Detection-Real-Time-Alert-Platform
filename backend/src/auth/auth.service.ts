@@ -2,11 +2,13 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../users/users.service';
+import { TenantsService } from '../tenants/tenants.service';
 
 @Injectable()
 export class AuthService {
     constructor(
         private usersService: UsersService,
+        private tenantsService: TenantsService,
         private jwtService: JwtService,
         private configService: ConfigService,
     ) { }
@@ -74,6 +76,20 @@ export class AuthService {
             authProvider: 'local',
         });
 
+        return this.login(user);
+    }
+
+    async registerTenant(data: any) {
+        // Register the tenant and admin user via TenantsService
+        const result = await this.tenantsService.register(data);
+        
+        // Fetch the created user to pass to login
+        const user = await this.usersService.findByEmail(data.adminEmail);
+        if (!user) {
+            throw new UnauthorizedException('Failed to retrieve registered user');
+        }
+
+        // Return JWT payload
         return this.login(user);
     }
 

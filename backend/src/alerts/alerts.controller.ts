@@ -2,9 +2,11 @@ import { Controller, Get, Post, Patch, Body, Param, Query, BadRequestException, 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TenantId } from '../common/decorators/tenant-id.decorator';
 import { AlertsService } from './alerts.service';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
 
 @Controller('alerts')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class AlertsController {
     constructor(private readonly alertsService: AlertsService) { }
 
@@ -50,6 +52,7 @@ export class AlertsController {
     }
 
     @Patch('bulk-update')
+    @Roles('ADMIN', 'ANALYST')
     async bulkUpdate(
         @TenantId() tenantId: string,
         @Body('alertIds') alertIds: string[],
@@ -79,6 +82,7 @@ export class AlertsController {
     }
 
     @Patch(':id/assign')
+    @Roles('ADMIN', 'ANALYST')
     async assignAlert(
         @TenantId() tenantId: string,
         @Param('id') id: string,
@@ -89,6 +93,7 @@ export class AlertsController {
     }
 
     @Patch(':id')
+    @Roles('ADMIN', 'ANALYST')
     async updateStatus(
         @TenantId() tenantId: string,
         @Param('id') id: string,
@@ -99,6 +104,7 @@ export class AlertsController {
     }
 
     @Post(':id/notes')
+    @Roles('ADMIN', 'ANALYST')
     async addNote(
         @TenantId() tenantId: string,
         @Param('id') id: string,

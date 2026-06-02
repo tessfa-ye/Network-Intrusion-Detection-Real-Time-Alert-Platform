@@ -8,6 +8,7 @@ import * as z from 'zod';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -19,7 +20,7 @@ import {
     FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
 
@@ -112,6 +113,11 @@ export default function LoginPage() {
                         </form>
                     </Form>
                 </CardContent>
+                <CardFooter className="flex justify-center pb-6">
+                    <p className="text-sm text-slate-500">
+                        Don't have an organization? <Link href="/register" className="text-primary hover:underline">Register here</Link>
+                    </p>
+                </CardFooter>
             </Card>
         </div>
     );
