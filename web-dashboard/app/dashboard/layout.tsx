@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
 import { connectSocket, disconnectSocket } from '@/lib/socket';
+import { api } from '@/lib/api';
 
 export default function DashboardLayout({
     children,
@@ -22,11 +23,13 @@ export default function DashboardLayout({
     const user = useAuthStore((state) => state.user);
     const logout = useAuthStore((state) => state.logout);
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const [tenant, setTenant] = useState<any>(null);
 
     useEffect(() => {
         const token = localStorage.getItem('accessToken');
         if (token) {
             connectSocket(token);
+            api.get('/tenants/me').then(res => setTenant(res.data)).catch(console.error);
         }
         return () => {
             disconnectSocket();
@@ -73,8 +76,18 @@ export default function DashboardLayout({
             >
                 <div className="flex h-16 items-center justify-between border-b px-4">
                     {!isCollapsed && (
-                        <div className="flex items-center gap-2 font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
-                            NIDAS
+                        <div className="flex items-center gap-2 font-bold text-transparent bg-clip-text bg-gradient-to-r"
+                             style={{
+                                backgroundImage: tenant?.primaryColor && tenant?.secondaryColor 
+                                    ? `linear-gradient(to right, ${tenant.primaryColor}, ${tenant.secondaryColor})` 
+                                    : undefined,
+                                WebkitBackgroundClip: 'text',
+                                ...(tenant?.primaryColor ? {} : { backgroundImage: 'linear-gradient(to right, #2563eb, #4f46e5)' }) // fallback
+                             }}>
+                            {tenant?.logo ? (
+                                <img src={tenant.logo} alt="Logo" className="h-8 w-8 object-contain" />
+                            ) : null}
+                            <span className="truncate max-w-[140px]">{tenant?.name || 'NIDAS'}</span>
                         </div>
                     )}
                     <div className={cn("flex items-center", isCollapsed && "w-full justify-center")}>

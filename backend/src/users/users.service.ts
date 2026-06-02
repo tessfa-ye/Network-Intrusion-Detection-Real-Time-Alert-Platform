@@ -47,8 +47,8 @@ export class UsersService {
     tenantId: string,
     id: string,
   ): Promise<Omit<User, 'passwordHash' | 'refreshToken'> | null> {
-    return this.prisma.user.findUnique({
-      where: { id }, // tenantId check can be implicit if id is unique, but let's add it for safety later or just rely on id
+    return this.prisma.user.findFirst({
+      where: { id, tenantId },
       select: {
         id: true,
         tenantId: true,
@@ -96,6 +96,10 @@ export class UsersService {
       delete data.password;
     }
 
+    // First verify user belongs to tenant
+    const user = await this.findById(tenantId, id);
+    if (!user) throw new Error('User not found or access denied');
+
     return this.prisma.user.update({
       where: { id },
       data,
@@ -141,6 +145,9 @@ export class UsersService {
   }
 
   async delete(tenantId: string, id: string): Promise<void> {
+    const user = await this.findById(tenantId, id);
+    if (!user) throw new Error('User not found or access denied');
+
     await this.prisma.user.delete({
       where: { id },
     });

@@ -3,13 +3,16 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TenantId } from '../common/decorators/tenant-id.decorator';
 import { RulesService } from './rules.service';
 import { DetectionRule } from '@prisma/client';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
 
 @Controller('rules')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class RulesController {
     constructor(private readonly rulesService: RulesService) { }
 
     @Post()
+    @Roles('ADMIN', 'ANALYST')
     async create(@TenantId() tenantId: string, @Body() ruleData: Partial<DetectionRule>) {
         return this.rulesService.create(tenantId, ruleData);
     }
@@ -34,6 +37,7 @@ export class RulesController {
     }
 
     @Patch(':id')
+    @Roles('ADMIN', 'ANALYST')
     async update(
         @TenantId() tenantId: string,
         @Param('id') id: string,
@@ -43,6 +47,7 @@ export class RulesController {
     }
 
     @Delete(':id')
+    @Roles('ADMIN')
     async delete(@TenantId() tenantId: string, @Param('id') id: string) {
         await this.rulesService.delete(tenantId, id);
         return { message: 'Rule deleted successfully' };

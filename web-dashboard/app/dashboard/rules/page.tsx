@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuthStore } from '@/lib/store';
 import { api } from '@/lib/api';
 import { DetectionRule } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,6 +35,9 @@ const severityColors = {
 
 export default function RulesPage() {
     const queryClient = useQueryClient();
+    const { user } = useAuthStore();
+    const isViewer = user?.role === 'VIEWER';
+    const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [isTemplatesDialogOpen, setIsTemplatesDialogOpen] = useState(false);
     const [editingRule, setEditingRule] = useState<DetectionRule | null>(null);
@@ -128,18 +132,22 @@ export default function RulesPage() {
                         <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                         Refresh
                     </Button>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setIsTemplatesDialogOpen(true)}
-                    >
-                        <BookTemplate className="mr-2 h-4 w-4" />
-                        Browse Templates
-                    </Button>
-                    <Button size="sm" onClick={() => setIsCreateDialogOpen(true)}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Create Rule
-                    </Button>
+                    {!isViewer && (
+                        <>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setIsTemplatesDialogOpen(true)}
+                            >
+                                <BookTemplate className="mr-2 h-4 w-4" />
+                                Browse Templates
+                            </Button>
+                            <Button size="sm" onClick={() => setIsCreateDialogOpen(true)}>
+                                <Plus className="mr-2 h-4 w-4" />
+                                Create Rule
+                            </Button>
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -161,7 +169,7 @@ export default function RulesPage() {
                                     <TableHead>Status</TableHead>
                                     <TableHead>Auto-Block</TableHead>
                                     <TableHead>Created</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
+                                    {!isViewer && <TableHead className="text-right">Actions</TableHead>}
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -198,24 +206,28 @@ export default function RulesPage() {
                                                 )}
                                             </TableCell>
                                             <TableCell className="text-xs text-muted-foreground">{new Date(rule.createdAt).toLocaleDateString()}</TableCell>
-                                            <TableCell className="text-right">
-                                                <div className="flex justify-end gap-2">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => setEditingRule(rule)}
-                                                    >
-                                                        <Edit className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => setDeletingRule(rule)}
-                                                    >
-                                                        <Trash2 className="h-4 w-4 text-red-500" />
-                                                    </Button>
-                                                </div>
-                                            </TableCell>
+                                            {!isViewer && (
+                                                <TableCell className="text-right">
+                                                    <div className="flex justify-end gap-2">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => setEditingRule(rule)}
+                                                        >
+                                                            <Edit className="h-4 w-4" />
+                                                        </Button>
+                                                        {isAdmin && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => setDeletingRule(rule)}
+                                                            >
+                                                                <Trash2 className="h-4 w-4 text-red-500" />
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                            )}
                                         </TableRow>
                                     ))
                                 )}

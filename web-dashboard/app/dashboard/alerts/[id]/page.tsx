@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { useAuthStore } from '@/lib/store';
 import { NidasAlert } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +33,8 @@ export default function AlertDetailPage() {
     const params = useParams();
     const router = useRouter();
     const queryClient = useQueryClient();
+    const { user } = useAuthStore();
+    const isViewer = user?.role === 'VIEWER';
     const alertId = params.id as string;
 
     const [newNote, setNewNote] = useState('');
@@ -133,7 +136,7 @@ export default function AlertDetailPage() {
                         </div>
                         <div>
                             <p className="text-sm font-medium text-muted-foreground">Status</p>
-                            <Select value={selectedStatus} onValueChange={handleStatusChange}>
+                            <Select value={selectedStatus} onValueChange={handleStatusChange} disabled={isViewer}>
                                 <SelectTrigger className="w-[200px]">
                                     <SelectValue />
                                 </SelectTrigger>
@@ -184,22 +187,24 @@ export default function AlertDetailPage() {
                                 <p className="text-sm text-muted-foreground">No investigation notes yet</p>
                             )}
                         </div>
-                        <div className="space-y-2">
-                            <Textarea
-                                placeholder="Add investigation note..."
-                                value={newNote}
-                                onChange={(e) => setNewNote(e.target.value)}
-                                rows={3}
-                            />
-                            <Button
-                                onClick={handleAddNote}
-                                disabled={!newNote.trim() || addNoteMutation.isPending}
-                                className="w-full"
-                            >
-                                {addNoteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Add Note
-                            </Button>
-                        </div>
+                        {!isViewer && (
+                            <div className="space-y-2">
+                                <Textarea
+                                    placeholder="Add investigation note..."
+                                    value={newNote}
+                                    onChange={(e) => setNewNote(e.target.value)}
+                                    rows={3}
+                                />
+                                <Button
+                                    onClick={handleAddNote}
+                                    disabled={!newNote.trim() || addNoteMutation.isPending}
+                                    className="w-full"
+                                >
+                                    {addNoteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Add Note
+                                </Button>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>

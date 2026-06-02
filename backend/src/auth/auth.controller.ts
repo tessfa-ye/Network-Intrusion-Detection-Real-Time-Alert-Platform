@@ -17,6 +17,11 @@ export class AuthController {
         return this.authService.register(body);
     }
 
+    @Post('register-tenant')
+    async registerTenant(@Body() body: any) {
+        return this.authService.registerTenant(body);
+    }
+
     @Post('refresh')
     async refresh(@Body('refreshToken') refreshToken: string) {
         return this.authService.refresh(refreshToken);
