@@ -29,7 +29,7 @@ const formSchema = z.object({
     lastName: z.string().min(1, 'Last name is required'),
     email: z.string().email('Invalid email address'),
     password: z.string().min(6, 'Password must be at least 6 characters').optional().or(z.literal('')),
-    role: z.enum(['ADMIN', 'ANALYST', 'VIEWER']),
+    role: z.enum(['SUPER_ADMIN', 'ADMIN', 'ANALYST', 'VIEWER']),
     active: z.boolean(),
     notificationPreferences: z.object({
         email: z.boolean(),
@@ -191,6 +191,7 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
+                                        <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
                                         <SelectItem value="ADMIN">Admin</SelectItem>
                                         <SelectItem value="ANALYST">Analyst</SelectItem>
                                         <SelectItem value="VIEWER">Viewer</SelectItem>

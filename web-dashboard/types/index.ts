@@ -3,7 +3,7 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
-  role: 'ADMIN' | 'ANALYST' | 'VIEWER';
+  role: 'SUPER_ADMIN' | 'ADMIN' | 'ANALYST' | 'VIEWER';
   active: boolean;
   lastLogin?: string;
   createdAt: string;
