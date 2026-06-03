@@ -10,7 +10,7 @@ import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '../../../components/ui/button';
 import {
     Form,
     FormControl,
@@ -18,11 +18,11 @@ import {
     FormItem,
     FormLabel,
     FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { api } from '@/lib/api';
-import { useAuthStore } from '@/lib/store';
+} from '../../../components/ui/form';
+import { Input } from "../../../components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "../../../components/ui/card";
+import { api } from "../../../lib/api";
+import { useAuthStore } from "../../../lib/store";
 
 const formSchema = z.object({
     email: z.string().email({
