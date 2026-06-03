@@ -4,13 +4,10 @@ const path = require('path');
 const nextConfig = {
   devIndicators: false,
   transpilePackages: ['recharts'],
-  // ignore typescript errors
+  
+  // This bypasses the TS check that is failing in the build container
   typescript: {
     ignoreBuildErrors: true,
-  },
-  // ignore eslint errors
-  eslint: {
-    ignoreDuringBuilds: true,
   },
   experimental: {
     webpackBuildWorker: true,
