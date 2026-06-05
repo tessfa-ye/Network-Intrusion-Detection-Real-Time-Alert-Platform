@@ -13,8 +13,8 @@ export class IntelligenceController {
     ) {}
 
     @Post('sync')
-    async syncFeeds() {
-        await this.intelligenceService.triggerSync();
+    async syncFeeds(@TenantId() tenantId: string) {
+        await this.intelligenceService.triggerSync(tenantId);
         return { message: 'Threat feeds synchronized successfully' };
     }
 
