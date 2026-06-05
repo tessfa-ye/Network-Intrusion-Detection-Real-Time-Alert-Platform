@@ -121,11 +121,25 @@ export default function DashboardPage() {
 
             socket.on('alert:new', (newAlert: AlertData) => {
                 setAlerts(prev => [newAlert, ...prev].slice(0, 50));
+                setStats(prev => ({
+                    ...prev,
+                    totalAlerts: prev.totalAlerts + 1,
+                    alertsChange: prev.alertsChange + 1
+                }));
+            });
+
+            socket.on('event:new', () => {
+                setStats(prev => ({
+                    ...prev,
+                    activeEvents: prev.activeEvents + 1,
+                    eventsChange: prev.eventsChange + 1
+                }));
             });
 
             return () => {
                 socket.off('stats:updated');
                 socket.off('alert:new');
+                socket.off('event:new');
             };
         }
     }, []);

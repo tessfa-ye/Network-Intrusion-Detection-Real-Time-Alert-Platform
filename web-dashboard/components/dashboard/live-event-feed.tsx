@@ -28,7 +28,7 @@ export function LiveEventFeed() {
         const token = localStorage.getItem('accessToken');
         
         const setupSocket = () => {
-             // Subscribe to the events channel
+             // Server authenticates automatically from socket.auth token on connect
              socket.emit('subscribe:events');
              console.log('📡 Subscribed to live events channel');
         };
@@ -45,6 +45,7 @@ export function LiveEventFeed() {
         socket.on('connect', setupSocket);
         
         const handleNewEvent = (event: any) => {
+            console.log('🚨 NEW EVENT RECEIVED IN BROWSER:', event.eventType);
             const newLog: LogEntry = {
                 timestamp: new Date(event.timestamp).toLocaleTimeString(),
                 type: event.eventType,
