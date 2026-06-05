@@ -1,8 +1,50 @@
+import * as readline from 'readline';
+
 const API_URL = process.env.API_URL || 'http://localhost:5000/api';
 
 const EVENT_TYPES = ['login', 'api_access', 'firewall', 'file_access', 'network'];
 const SEVERITIES = ['low', 'medium', 'high', 'critical'];
 const SOURCE_IPS = ['192.168.1.10', '10.0.0.5', '45.77.12.34', '185.22.1.99', '172.16.0.44'];
+
+let authToken = '';
+
+async function login() {
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+    });
+
+    const question = (query: string): Promise<string> => {
+        return new Promise((resolve) => {
+            rl.question(query, resolve);
+        });
+    };
+
+    console.log('--- NIDAS Traffic Simulator Authentication ---');
+    const email = process.env.SIMULATOR_EMAIL || await question('Enter your login email: ');
+    const password = process.env.SIMULATOR_PASSWORD || await question('Enter your login password: ');
+    rl.close();
+
+    console.log('Authenticating...');
+    try {
+        const response = await fetch(`${API_URL}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Login failed with status ${response.status}`);
+        }
+
+        const data = await response.json();
+        authToken = data.accessToken;
+        console.log('✅ Authentication successful!\n');
+    } catch (error: any) {
+        console.error('❌ Failed to authenticate. Please check your credentials and ensure the backend is running.');
+        process.exit(1);
+    }
+}
 
 async function sendEvent(payload: any) {
     try {
@@ -10,6 +52,7 @@ async function sendEvent(payload: any) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
             },
             body: JSON.stringify(payload),
         });
@@ -79,6 +122,8 @@ async function simulateRandomTraffic() {
 }
 
 async function run() {
+    await login();
+
     console.log('--- NIDAS Traffic Simulator Starting (Infinite Loop) ---');
 
     const EXTENDED_IPS = [
